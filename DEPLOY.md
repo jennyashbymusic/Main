@@ -95,7 +95,14 @@ Join the list on your home page with your own address. You should get the welcom
 ## 9. Add your music
 
 - **Members-only songs:** use `/admin` > Songs (or your upload script). They are saved on the disk automatically.
-- **Music for the store: use a Supabase bucket (easiest, drag and drop in your browser).**
+- **Music for the store, option A (recommended): upload it in your browser.** Open `/admin`, find **Music store > Add music**, and drag songs or whole album folders onto the box (or use the two buttons). A loose file is a **song**; a **folder** is an **album** (the folder name becomes the album name, its tracks go inside, and a picture in the folder is the cover). A cover picture for a single song must have the same name as the song (`Come Sit With Me.mp3` + `Come Sit With Me.jpg`).
+  - You will see a progress bar for every file. Two upload at a time. **If it stops** (you close the tab, or your internet drops), just drag the same folder in again: files that are already there are skipped, so it carries on where it left off.
+  - **Everything in the store** (below the box) lists what is there, with a search box and a Remove button for each song and album. It also shows how much of the disk is used and free.
+  - **The disk size** is set in `render.yaml` (10 GB to start, room for roughly 2,000 MP3s). If you run low, make it bigger in Render (**your service > Disks**). A disk can grow but never shrink. To my knowledge Render charges about 25 cents per GB per month, so 10 GB is about $2.50: check render.com/pricing.
+  - **Biggest single file:** 100 MB by default (an MP3 is about 4 MB). Lossless WAV/FLAC files can be bigger. To allow more, set `MAX_STORE_FILE_MB` in Render's Environment. Very large files can be copied over SSH instead.
+  - **Keep it smaller:** music sold both as a single song and inside an album is stored twice, once for each.
+
+- **Music for the store, option B: a Supabase bucket** (only worth it if you would rather not keep the music on Render's disk; the free plan holds about 1 GB, so a big library needs their paid plan).
   1. Go to [supabase.com](https://supabase.com), sign in, and **New project**. Make this project **just for the music store** (see the warning below). Pick any name, region and database password.
   2. In the project: **Storage > New bucket**. Name it exactly `store`. **Leave "Public bucket" OFF.** The bucket must stay private, because paid music is only ever handed out through the site.
   3. Open the bucket. Click **Create folder** and make one called `songs`, and one called `albums`.
@@ -111,7 +118,6 @@ Join the list on your home page with your own address. You should get the welcom
   >
   > **Free Supabase projects can be paused** after a quiet week, and a paused project cannot serve your music. The site checks the bucket every few hours, which normally keeps it active, but if the store ever shows a "could not read the bucket" message, open the Supabase dashboard and click **Restore**. For a store you depend on, consider Supabase's paid plan.
   >
-  > **Prefer no extra account?** Leave `SUPABASE_URL` empty and the music is read from the disk instead, in `/var/data/store` (with `songs/` and `albums/` inside). You would copy files there over SSH: in Render's **Account Settings** add your SSH key, then in the service's **Connect** menu copy the SSH command and use `scp` (or WinSCP). See Render's docs, "SSH".
 
 ## 10. Moving what you already have (optional)
 

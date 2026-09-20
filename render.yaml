@@ -17,7 +17,7 @@ services:
     disk:
       name: club-data
       mountPath: /var/data
-      sizeGB: 1 # room for the database and a few hundred MP3s. You can make it bigger later in Render (it cannot be made smaller).
+      sizeGB: 10 # room for the database and a big music library (an MP3 is about 4 MB, so roughly 2,000 songs). You can make it bigger later in Render, but never smaller.
 
     envVars:
       # ---- fixed settings (already right, nothing to fill in) ----

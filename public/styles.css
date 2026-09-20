@@ -473,6 +473,25 @@ td, th { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--lin
 .tip-other span { color: var(--muted); font-weight: 700; }
 .field .tip-other input, .field .tip-other input:focus { width: 100%; min-width: 0; padding: 14px 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 
+/* /admin: adding music to the store */
+.dropzone { border: 2px dashed rgba(226, 180, 95, .45); border-radius: 14px; padding: 18px; text-align: center; transition: background .15s, border-color .15s; }
+.dropzone.over { background: rgba(226, 180, 95, .10); border-color: var(--accent); }
+.uprow { display: grid; grid-template-columns: minmax(0, 1fr) 120px 96px; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.uprow .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uprow .st { text-align: right; color: var(--muted); }
+.uprow.ok .st { color: var(--ok); }
+.uprow.err .st { color: #ff8f7b; }
+.uprow .bar { height: 6px; }
+.manage-list { max-height: 320px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; padding: 2px 12px; }
+.manage-list .uprow:first-child { border-top: 0; }
+.details-search, #storeUpload input[type=search] { padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-2); color: var(--text); font: inherit; }
+
+/* The store page: search box for a big catalog */
+.store-search { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 22px 0 6px; }
+.store-search input { flex: 1 1 260px; max-width: 420px; padding: 13px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg-2); color: var(--text); font: inherit; outline: none; }
+.store-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(226, 180, 95, .22); }
+.store-more { display: flex; justify-content: center; margin: 22px 0 0; }
+
 /* Privacy / Terms pages */
 .legal h1 { font-size: clamp(30px, 5vw, 44px); }
 .legal h2 { font-size: 22px; margin: 30px 0 8px; }

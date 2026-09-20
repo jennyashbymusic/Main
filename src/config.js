@@ -95,6 +95,7 @@ export const cfg = {
   supabaseKey: env('SUPABASE_SERVICE_ROLE_KEY'),
   storeBucket: env('SUPABASE_STORE_BUCKET', 'store'),
   storeCacheSeconds: Number(env('STORE_CACHE_SECONDS', '60')), // how long the site remembers what is in the bucket
+  maxStoreFileMb: Number(env('MAX_STORE_FILE_MB', '100')), // the biggest single file the /admin music uploader accepts
   storeDir: path.resolve(projectRoot, env('STORE_DIR', 'store')),
   songPriceCents: Number(env('SONG_PRICE_CENTS', '200')),
   albumPriceCents: Number(env('ALBUM_PRICE_CENTS', '1200')),

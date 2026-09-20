@@ -67,6 +67,12 @@
       render();
     }
 
+    // ---- search (a big catalog needs it) ----
+    const PAGE = 24; // songs shown before "Show all"
+    let query = '';
+    let showAll = false;
+    const norm = (t) => String(t).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+
     // ---- rendering ----
     const cover = (p, cls) => p.cover
       ? el('img', { src: p.cover, alt: '', loading: 'lazy' })
@@ -103,12 +109,33 @@
         el('p', { class: 'eyebrow' }, 'Music store'),
         el('h1', {}, 'Own the ', el('span', { class: 'grad' }, 'music')),
         el('p', { class: 'lead' }, `Songs ${money(catalog.songPriceCents, catalog.currency)} each. Albums ${money(catalog.albumPriceCents, catalog.currency)}. Digital downloads, yours to keep.`));
-      if (catalog.albums.length) {
-        app.append(el('h2', { style: 'font-size:26px;margin:28px 0 14px' }, 'Albums'), el('div', { class: 'store-grid' }, catalog.albums.map((a) => product(a, 'album'))));
+      // Search: only shown once there is enough to search. Typing redraws just the lists below it, so the box keeps focus.
+      const big = catalog.songs.length + catalog.albums.length > PAGE;
+      const results = el('div', {});
+      const searchBox = el('input', { type: 'search', placeholder: `Search ${catalog.songs.length} songs and ${catalog.albums.length} album${catalog.albums.length === 1 ? '' : 's'}…`, 'aria-label': 'Search the store', value: query });
+      searchBox.addEventListener('input', () => { query = searchBox.value; showAll = false; drawResults(); });
+      if (big && !catalog.demo) app.append(el('div', { class: 'store-search' }, searchBox));
+      app.append(results);
+
+      function drawResults() {
+        const q = norm(query);
+        const albums = q ? catalog.albums.filter((a) => norm(a.title).includes(q) || a.tracks.some((t) => norm(t).includes(q))) : catalog.albums;
+        const songsAll = q ? catalog.songs.filter((s) => norm(s.title).includes(q)) : catalog.songs;
+        const limit = q || showAll ? 200 : PAGE; // a search shows up to 200 matches; otherwise the first page
+        const songs = songsAll.slice(0, limit);
+        const parts = [];
+        if (q) parts.push(el('p', { class: 'small muted', style: 'margin:6px 0 0', role: 'status' }, `${songsAll.length} song${songsAll.length === 1 ? '' : 's'} and ${albums.length} album${albums.length === 1 ? '' : 's'} match "${query.trim()}"`));
+        if (albums.length) parts.push(el('h2', { style: 'font-size:26px;margin:28px 0 14px' }, 'Albums'), el('div', { class: 'store-grid' }, albums.map((a) => product(a, 'album'))));
+        if (songsAll.length) {
+          parts.push(el('h2', { style: 'font-size:26px;margin:34px 0 14px' }, 'Songs'), el('div', { class: 'store-grid' }, songs.map((s) => product(s, 'song'))));
+          if (!q && !showAll && songsAll.length > PAGE) {
+            parts.push(el('div', { class: 'store-more' }, el('button', { class: 'btn ghost', type: 'button', onclick: () => { showAll = true; drawResults(); } }, `Show all ${songsAll.length} songs`)));
+          }
+        }
+        if (q && !songsAll.length && !albums.length) parts.push(el('p', { class: 'muted', style: 'margin:22px 0' }, 'Nothing matches that. Try a different word.'));
+        results.replaceChildren(...parts);
       }
-      if (catalog.songs.length) {
-        app.append(el('h2', { style: 'font-size:26px;margin:34px 0 14px' }, 'Songs'), el('div', { class: 'store-grid' }, catalog.songs.map((s) => product(s, 'song'))));
-      }
+      drawResults();
       updateCartBar();
     }
 

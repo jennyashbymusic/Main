@@ -66,6 +66,7 @@
     <div class="card" style="margin-top:16px">
       <h3>Music store</h3>
       <div id="store" class="small"></div>
+      <div id="storeUpload"></div>
     </div>
 
     <div class="card" style="margin-top:16px">
@@ -242,7 +243,9 @@
     $('#sendTest').onclick = (e) => act(e.target, () => post('/admin/api/test', { email: $('#testEmail').value }), () => 'Test email sent.');
     $('#resync').onclick = (e) => act(e.target, () => post('/admin/api/resync'), (r) => `Queued ${r.queued} contacts.`);
 
+    window.addEventListener('store-changed', () => refresh()); // the "Add music" panel tells us when the store changed
     refresh();
   </script>
+  <script type="module" src="/admin-store.js"></script>
 </body>
 </html>

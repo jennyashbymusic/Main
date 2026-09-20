@@ -14,6 +14,7 @@ import { adminSummary, setSpotifyAdded } from '../voting.js';
 import { refreshStore, storeSummary } from '../store.js';
 import { chorusSummary, setDelivered } from '../chorus.js';
 import { tipsSummary } from '../tips.js';
+import { UploadError, deleteFiles, listFiles, saveUpload, targetFor } from '../storeFiles.js';
 import { safeEqual } from '../util.js';
 
 export const router = Router();
@@ -101,6 +102,22 @@ router.post('/api/songs/delete', wrap(async (req) => {
   deleteSong(String(req.body?.slug || ''));
   return { ok: true };
 }));
+
+// ---- the music store: add, list and remove songs and albums (music on disk; with a Supabase bucket you upload there instead) ----
+router.get('/api/store/files', wrap(async () => listFiles()));
+
+/** PUT the raw file, Content-Type application/octet-stream, with ?kind=song|album&album=Name&name=file.mp3 */
+router.put('/api/store/upload', async (req, res) => {
+  try {
+    const target = targetFor({ kind: String(req.query.kind || ''), album: String(req.query.album || ''), name: String(req.query.name || '') });
+    res.json({ ok: true, ...(await saveUpload(req, target)) });
+  } catch (err) {
+    if (!(err instanceof UploadError)) console.error('[admin upload]', err.message);
+    res.status(err.status || 500).set('Connection', 'close').json({ error: err instanceof UploadError ? err.message : 'The upload failed. Please try again.' });
+  }
+});
+
+router.post('/api/store/delete', wrap(async (req) => deleteFiles(req.body || {})));
 
 /** Upload a song's audio: PUT the raw file with an audio/* Content-Type and ?filename=name.mp3. */
 router.put(
