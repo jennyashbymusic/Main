@@ -57,6 +57,8 @@ services:
         sync: false
       - key: CONTACT_EMAIL
         sync: false
+      - key: JOIN_VIDEO_ID # the YouTube video on the "Become a member" page; change it here any time
+        value: zrjh6igPAfw
       - key: NOTIFY_EMAIL
         sync: false
       - key: YOUTUBE_API_KEY

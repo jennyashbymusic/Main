@@ -10,6 +10,26 @@ const flag = (key, fallback) => {
   return v === '' ? fallback : ['1', 'true', 'yes', 'on'].includes(v.toLowerCase());
 };
 
+// A YouTube video ID from either a bare ID ("zrjh6igPAfw") or any normal YouTube link (watch?v=, youtu.be/, /shorts/, /embed/). '' if it is not one.
+export function youtubeId(value) {
+  const v = String(value ?? '').trim();
+  if (/^[\w-]{11}$/.test(v)) return v;
+  const m = v.match(/(?:youtu\.be\/|[?&]v=|\/(?:embed|shorts|live|v)\/)([\w-]{11})(?![\w-])/);
+  return m ? m[1] : '';
+}
+const DEFAULT_JOIN_VIDEO = 'zrjh6igPAfw';
+// The video on the "Become a member" page. Unset = the default above; blank = no video; anything that is not a YouTube ID or link
+// (a typo) falls back to the default, with a warning, so the sales page never ends up with a broken player.
+let joinVideoId = DEFAULT_JOIN_VIDEO;
+if (process.env.JOIN_VIDEO_ID !== undefined) {
+  const raw = env('JOIN_VIDEO_ID');
+  joinVideoId = raw === '' ? '' : youtubeId(raw);
+  if (raw !== '' && !joinVideoId) {
+    joinVideoId = DEFAULT_JOIN_VIDEO;
+    console.warn('[config] JOIN_VIDEO_ID is not a YouTube video ID or link, so the default video is used. Use the part after v= in the YouTube link.');
+  }
+}
+
 const port = Number(env('PORT', '3000'));
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -66,6 +86,9 @@ export const cfg = {
   channelUrl: env('YOUTUBE_CHANNEL_URL'),
   // Video shown next to the signup form (the ID after "v=" in a YouTube link). Set it blank to use the channel's newest upload instead.
   featuredVideoId: process.env.FEATURED_VIDEO_ID === undefined ? 'm6McIfkZy40' : env('FEATURED_VIDEO_ID'),
+
+  // Video on the "Become a member" page (the ID after "v=" in a YouTube link, or a whole link). Blank = no video.
+  joinVideoId,
 
   // Membership
   priceCents: Number(env('PRICE_CENTS', '500')),

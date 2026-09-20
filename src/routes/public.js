@@ -43,6 +43,7 @@ router.get('/config', (_req, res) => {
     votesMember: cfg.votesMember,
     downloadLimit: cfg.downloadLimit,
     contactEmail: cfg.contactEmail || null,
+    joinVideoId: cfg.joinVideoId || null, // the video on the "Become a member" page (null = none)
     youtubeUrl: cfg.channelUrl || (cfg.youtubeChannelId ? `https://www.youtube.com/channel/${cfg.youtubeChannelId}` : null),
     songsPerDrop: cfg.songsPerDrop,
     channelUrl: cfg.channelUrl || null,

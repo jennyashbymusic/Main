@@ -20,7 +20,7 @@
   <div class="page-body">
     <main class="split" style="padding:40px 0 60px">
       <div>
-        <div class="video join-video" id="joinVideo"></div>
+        <div class="video join-video" id="joinVideo" hidden></div>
         <div class="notice" id="notice" hidden></div>
         <p class="eyebrow">You're on the list</p>
         <h1 style="font-size:clamp(32px,5.4vw,50px)">Now get every song,<br><span class="grad">every week.</span></h1>
@@ -67,23 +67,26 @@
     }
 
     // The video above the headline: a poster that loads the YouTube player only when clicked (fast page, no tracking until play).
-    // To change the video, change this ID (the part after v= in the YouTube link).
-    const JOIN_VIDEO_ID = 'zrjh6igPAfw';
+    // Which video is the JOIN_VIDEO_ID setting (on Render: Environment). Blank there = no video, and the box stays hidden.
     const joinVideo = $('#joinVideo');
-    const play = document.createElement('button');
-    play.type = 'button'; play.className = 'video-play'; play.setAttribute('aria-label', 'Play the video');
-    play.innerHTML = '<img alt="" width="480" height="360"><span class="play-icon" aria-hidden="true"></span>';
-    play.querySelector('img').src = `https://i.ytimg.com/vi/${JOIN_VIDEO_ID}/hqdefault.jpg`;
-    play.addEventListener('click', () => {
-      const frame = document.createElement('iframe');
-      frame.src = `https://www.youtube-nocookie.com/embed/${JOIN_VIDEO_ID}?autoplay=1&rel=0`;
-      frame.title = 'Jenny Ashby video';
-      frame.allowFullscreen = true;
-      frame.referrerPolicy = 'strict-origin-when-cross-origin';
-      frame.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
-      joinVideo.replaceChildren(frame);
-    });
-    joinVideo.append(play);
+    function showJoinVideo(id) {
+      const play = document.createElement('button');
+      play.type = 'button'; play.className = 'video-play'; play.setAttribute('aria-label', 'Play the video');
+      play.innerHTML = '<img alt="" width="480" height="360"><span class="play-icon" aria-hidden="true"></span>';
+      play.querySelector('img').src = `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`;
+      play.addEventListener('click', () => {
+        const frame = document.createElement('iframe');
+        frame.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0`;
+        frame.title = 'Jenny Ashby video';
+        frame.allowFullscreen = true;
+        frame.referrerPolicy = 'strict-origin-when-cross-origin';
+        frame.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+        joinVideo.replaceChildren(frame);
+      });
+      joinVideo.replaceChildren(play);
+      joinVideo.hidden = false;
+    }
+    api('/api/config').then((c) => { if (c.joinVideoId) showJoinVideo(c.joinVideoId); }).catch(() => { /* no video if the settings cannot be read */ });
 
     const notice = $('#notice');
     if (param('back')) {
