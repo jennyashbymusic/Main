@@ -18,9 +18,9 @@
   <div class="page-box">
 
   <div class="page-body">
-    <main class="split" style="padding:40px 0 60px">
-      <div>
-        <div class="video join-video" id="joinVideo" hidden></div>
+    <main class="split join" style="padding:40px 0 60px">
+      <div class="video join-video" id="joinVideo"></div>
+      <div class="join-text">
         <div class="notice" id="notice" hidden></div>
         <p class="eyebrow">You're on the list</p>
         <h1 style="font-size:clamp(32px,5.4vw,50px)">Now get every song,<br><span class="grad">every week.</span></h1>
@@ -96,9 +96,10 @@
         joinVideo.replaceChildren(frame);
       });
       joinVideo.replaceChildren(play);
-      joinVideo.hidden = false;
     }
-    api('/api/config').then((c) => { if (c.joinVideoId) showJoinVideo(c.joinVideoId); }).catch(() => { /* no video if the settings cannot be read */ });
+    // The box is on the page from the start (it keeps its 16:9 space, so nothing jumps when the picture arrives); with no video it is removed.
+    function hideJoinVideo() { joinVideo.hidden = true; document.querySelector('main.join').classList.add('no-video'); }
+    api('/api/config').then((c) => { if (c.joinVideoId) showJoinVideo(c.joinVideoId); else hideJoinVideo(); }).catch(hideJoinVideo);
 
     const notice = $('#notice');
     if (param('back')) {

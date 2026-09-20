@@ -498,7 +498,25 @@ td, th { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--lin
 .legal p, .legal li { color: var(--muted); line-height: 1.7; }
 .legal ul { padding-left: 22px; }
 .legal .updated { font-size: 14px; color: var(--muted); }
-.join-video { margin-bottom: 26px; }
-.join-side { display: grid; gap: 18px; align-content: start; }
+/* Join page. Desktop: video and text stacked on the left, the free-song card and the membership box stacked on the right.
+   Phone (one column): video, then the free-song card, then the text, then the membership box. */
+.split.join > .join-video { grid-column: 1; grid-row: 1; margin: 0; }
+.split.join > .join-text { grid-column: 1; grid-row: 2; }
+.split.join > .join-side { grid-column: 2; grid-row: 1 / span 2; display: grid; gap: 18px; align-content: start; }
+@media (min-width: 801px) {
+  /* the video row is only as tall as the video: the text row takes up whatever height the taller right column needs */
+  .split.join { row-gap: 26px; grid-template-rows: auto 1fr; }
+  /* no video: the text and the cards both start at the top */
+  .split.join.no-video { grid-template-rows: auto; }
+  .split.join.no-video > .join-text, .split.join.no-video > .join-side { grid-row: 1; }
+}
+@media (max-width: 800px) {
+  .split.join > .join-video, .split.join > .join-text, .split.join > .join-side { grid-column: 1; grid-row: auto; }
+  .split.join > .join-side { display: contents; } /* its two cards become separate items, so they can sit either side of the text */
+  .split.join > .join-video { order: 1; }
+  .split.join .firstsong { order: 2; }
+  .split.join > .join-text { order: 3; }
+  .split.join .pricebox { order: 4; }
+}
 .firstsong h2 { margin: 12px 0 6px; font-size: 22px; line-height: 1.2; }
 .firstsong .btn { margin-top: 14px; }
