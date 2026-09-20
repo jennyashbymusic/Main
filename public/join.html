@@ -33,6 +33,14 @@
         </ul>
       </div>
 
+      <div class="join-side">
+      <section class="card firstsong" aria-labelledby="fsTitle">
+        <div class="pill">Free</div>
+        <h2 id="fsTitle">Your first song is free</h2>
+        <p class="muted small" id="fsText">Song 1 is already yours. No card needed.</p>
+        <a class="btn" id="firstSong" href="/#signup" style="width:100%">Get your first song now →</a>
+      </section>
+
       <aside class="card pricebox">
         <div class="pill red">Membership</div>
         <p class="price" style="margin:14px 0 4px"><span data-price>$5</span><small> / month</small></p>
@@ -47,6 +55,7 @@
           <p class="muted small" id="freeHint" style="margin:10px 0 0">Song 1 is already yours. Each friend who joins through your link unlocks another.</p>
         </div>
       </aside>
+      </div>
     </main>
   </div>
   </div>
@@ -60,7 +69,10 @@
     const token = getToken();
     if (token) {
       $('#free').href = `/unlock?t=${encodeURIComponent(token)}`;
+      $('#firstSong').href = `/unlock?t=${encodeURIComponent(token)}`; // their invite page, where song 1 is waiting
     } else {
+      // Nobody signed in on this browser: the button takes them to the email box on the home page, which sends the first song.
+      $('#fsText').textContent = 'Enter your email and your first song arrives in seconds. No card needed.';
       // Not signed in on this browser: send them back to enter their email, which brings them back here with their link.
       $('#free').textContent = 'Already on the list? Get your invite page →';
       $('#freeHint').hidden = true;

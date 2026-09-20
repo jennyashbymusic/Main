@@ -499,3 +499,6 @@ td, th { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--lin
 .legal ul { padding-left: 22px; }
 .legal .updated { font-size: 14px; color: var(--muted); }
 .join-video { margin-bottom: 26px; }
+.join-side { display: grid; gap: 18px; align-content: start; }
+.firstsong h2 { margin: 12px 0 6px; font-size: 22px; line-height: 1.2; }
+.firstsong .btn { margin-top: 14px; }
