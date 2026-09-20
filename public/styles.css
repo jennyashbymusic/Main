@@ -498,3 +498,4 @@ td, th { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--lin
 .legal p, .legal li { color: var(--muted); line-height: 1.7; }
 .legal ul { padding-left: 22px; }
 .legal .updated { font-size: 14px; color: var(--muted); }
+.join-video { margin-bottom: 26px; }
