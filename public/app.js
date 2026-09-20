@@ -259,9 +259,9 @@ export function memberGate(container, { title = ['Members ', 'area'], text, extr
 // image at every screen size, and each link has a 44px minimum touch target for phones.
 // The URLs come from the server config (SPOTIFY_URL, YOUTUBE_MUSIC_URL, AMAZON_MUSIC_URL); a blank URL means no link.
 const LOGO_HITS = [
-  { id: 'spotify', label: 'Spotify', x: 51.9, y: 71.6, w: 12.5, h: 10.5 },
-  { id: 'youtube-music', label: 'YouTube Music', x: 67.7, y: 72.4, w: 14, h: 10.3 },
-  { id: 'amazon-music', label: 'Amazon Music', x: 83, y: 73.4, w: 12.5, h: 9.5 },
+  { id: 'spotify', label: 'Spotify', x: 51.9, y: 71.7, w: 12.5, h: 10.5 },
+  { id: 'youtube-music', label: 'YouTube Music', x: 67.7, y: 71.6, w: 14, h: 10.3 },
+  { id: 'amazon-music', label: 'Amazon Music', x: 83, y: 72.6, w: 12.5, h: 9.5 },
 ];
 
 export async function enhanceBanners() {
