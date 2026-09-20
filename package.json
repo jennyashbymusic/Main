@@ -1,0 +1,25 @@
+{
+  "name": "weekly-songs-club",
+  "version": "1.0.0",
+  "description": "Paid email subscription funnel: email capture -> Stripe $5/mo -> 3 YouTube songs a week, with a viral share-gate unlock.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "dev": "node --watch --disable-warning=ExperimentalWarning server.js",
+    "send": "node --disable-warning=ExperimentalWarning scripts/send-now.js",
+    "runway": "node --disable-warning=ExperimentalWarning scripts/runway.js",
+    "setup-check": "node --disable-warning=ExperimentalWarning scripts/setup-check.js"
+  },
+  "dependencies": {
+    "archiver": "^8.0.0",
+    "dotenv": "^18.0.1",
+    "express": "^5.2.1",
+    "node-cron": "^4.6.0",
+    "nodemailer": "^10.0.10",
+    "stripe": "^22.6.2"
+  }
+}

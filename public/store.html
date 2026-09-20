@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Music Store — {brand}</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/img/jenny-avatar.jpg">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="topbar" hidden></div>
+
+  <header class="banner-full">
+    <div class="banner-box"><div class="banner-inner"><a class="banner-home" href="/" aria-label="Jenny Ashby home"><img class="banner" src="/img/jenny-ashby-header.jpg" width="1600" height="608" alt="Jenny Ashby — Dark Country, Real Stories"></a></div></div>
+  </header>
+
+  <div class="page-box">
+
+  <div class="page-body" style="padding-bottom:130px">
+    <main style="padding:34px 0 130px" id="app">
+      <p class="muted">Loading the store…</p>
+    </main>
+  </div>
+  </div>
+
+  <div class="cartbar" id="cartbar" hidden>
+    <div class="wrap wide cartbar-in">
+      <div><b id="cartCount"></b> <span class="muted" id="cartTotal"></span><div class="msg err" id="cartMsg" role="alert" style="margin:0;min-height:0"></div></div>
+      <div class="row" style="gap:8px">
+        <button class="btn ghost sm" id="cartClear" type="button">Clear</button>
+        <button class="btn" id="checkout" type="button">Checkout →</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { $, api, el, applyBranding, getToken, forgetToken, mountNav, memberGate, money, param } from '/app.js';
+    applyBranding();
+    mountNav('store', { publicBar: true });
+
+    const token = getToken();
+    const preview = param('preview') === '1'; // /store?preview=1 shows sample items so an empty store can still be seen
+    const app = $('#app');
+    const CART_KEY = 'lm_cart';
+    let cart = [];
+    let catalog = null;
+
+    // ---- cart (kept in this browser only; prices are always re-computed on the server at checkout) ----
+    const loadCart = () => { try { return JSON.parse(localStorage.getItem(CART_KEY) || '[]'); } catch { return []; } };
+    const saveCart = () => { try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch { /* storage blocked */ } };
+    const products = () => (catalog ? [...catalog.albums, ...catalog.songs] : []);
+    const inCart = (id) => cart.includes(id);
+
+    function updateCartBar() {
+      const chosen = products().filter((p) => inCart(p.id));
+      const bar = $('#cartbar');
+      bar.hidden = chosen.length === 0;
+      $('#cartCount').textContent = `${chosen.length} item${chosen.length === 1 ? '' : 's'}`;
+      $('#cartTotal').textContent = `· ${money(chosen.reduce((sum, p) => sum + p.priceCents, 0), catalog.currency)}`;
+    }
+
+    function toggle(id) {
+      cart = inCart(id) ? cart.filter((x) => x !== id) : [...cart, id];
+      saveCart();
+      $('#cartMsg').textContent = '';
+      render();
+    }
+
+    // ---- rendering ----
+    const cover = (p, cls) => p.cover
+      ? el('img', { src: p.cover, alt: '', loading: 'lazy' })
+      : el('div', { class: 'thumb-empty' }, '♪');
+
+    function product(p, kind) {
+      const chosen = inCart(p.id);
+      return el('article', { class: `product ${kind}${chosen ? ' in-cart' : ''}` },
+        el('div', { class: 'product-cover' }, cover(p), kind === 'album' ? el('span', { class: 'chip' }, 'Album') : null),
+        el('div', { class: 'product-body' },
+          el('h3', {}, p.title),
+          kind === 'album'
+            ? el('details', {}, el('summary', { class: 'small muted' }, `${p.tracks.length} track${p.tracks.length === 1 ? '' : 's'}`),
+                el('ol', { class: 'small muted tracklist' }, p.tracks.map((t) => el('li', {}, t))))
+            : (p.listenUrl ? el('a', { class: 'small', href: p.listenUrl, target: '_blank', rel: 'noopener' }, 'Listen first ↗') : el('span', { class: 'small muted' }, 'Digital download')),
+          el('div', { class: 'product-buy' },
+            el('b', { class: 'price-tag' }, money(p.priceCents, catalog.currency)),
+            el('button', { class: `btn sm${chosen ? ' ghost' : ''}`, type: 'button', onclick: () => toggle(p.id) }, chosen ? 'In cart ✓ · remove' : 'Add to cart'))));
+    }
+
+    function render() {
+      app.replaceChildren();
+      if (!catalog.ready) {
+        app.append(el('h1', {}, 'The store is ', el('span', { class: 'grad' }, 'opening soon')),
+          el('p', { class: 'lead' }, "New songs and albums are on their way. Check back soon."));
+        $('#cartbar').hidden = true;
+        return;
+      }
+      if (catalog.demo) {
+        app.append(el('div', { class: 'notice' }, el('b', {}, 'Preview. '), 'These are sample items so you can see how the store will look. Nothing here can be bought. Add your audio files to the store folder to open the real store. ',
+          el('a', { href: '/store' }, 'Leave preview →')));
+      }
+      app.append(
+        el('p', { class: 'eyebrow' }, 'Music store'),
+        el('h1', {}, 'Own the ', el('span', { class: 'grad' }, 'music')),
+        el('p', { class: 'lead' }, `Songs ${money(catalog.songPriceCents, catalog.currency)} each. Albums ${money(catalog.albumPriceCents, catalog.currency)}. Digital downloads, yours to keep.`));
+      if (catalog.albums.length) {
+        app.append(el('h2', { style: 'font-size:26px;margin:28px 0 14px' }, 'Albums'), el('div', { class: 'store-grid' }, catalog.albums.map((a) => product(a, 'album'))));
+      }
+      if (catalog.songs.length) {
+        app.append(el('h2', { style: 'font-size:26px;margin:34px 0 14px' }, 'Songs'), el('div', { class: 'store-grid' }, catalog.songs.map((s) => product(s, 'song'))));
+      }
+      updateCartBar();
+    }
+
+    // ---- start ----
+    function gate() {
+      $('#cartbar').hidden = true;
+      memberGate(app, {
+        title: ['Join free to ', 'shop'],
+        text: "The music store is part of the members area. Enter your email to get in. It's free.",
+        extra: el('p', { class: 'small', style: 'margin:14px 0 0' }, el('a', { href: '/leaderboard' }, 'Just looking? See the public leaderboard →')),
+        source: 'gate:store',
+      });
+    }
+
+    async function start() {
+      if (!token) return gate();
+      try {
+        catalog = await api(`/api/store/catalog?t=${encodeURIComponent(token)}${preview ? '&preview=1' : ''}`);
+      } catch (err) {
+        if (/join free/i.test(err.message)) { forgetToken(); return gate(); }
+        app.replaceChildren(el('h1', {}, 'Something ', el('span', { class: 'grad' }, 'went wrong')), el('p', { class: 'lead' }, err.message));
+        return;
+      }
+      const valid = new Set(products().map((p) => p.id));
+      cart = loadCart().filter((id) => valid.has(id)); // drop anything that has since been removed from the store
+      saveCart();
+      render();
+    }
+
+    $('#cartClear').addEventListener('click', () => { cart = []; saveCart(); render(); });
+    $('#checkout').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true; btn.textContent = 'Opening secure checkout…'; $('#cartMsg').textContent = '';
+      try {
+        const { url } = await api('/api/store/checkout', { method: 'POST', body: { items: cart, token } });
+        location.href = url;
+      } catch (err) {
+        $('#cartMsg').textContent = err.message;
+        btn.disabled = false; btn.textContent = 'Checkout →';
+      }
+    });
+
+    start();
+  </script>
+</body>
+</html>

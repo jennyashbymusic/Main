@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="wrap" style="padding-bottom:60px">
+    <header class="top"><span class="brand"><span class="dot"></span>Admin</span></header>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>Integrations</h3>
+      <div id="integrations" class="small muted"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>Current drop</h3>
+      <div id="drop" class="muted">—</div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn sm ghost" id="newDrop">Pick 3 new songs</button>
+        <button class="btn sm" id="sendDrop">Send this drop now</button>
+        <span class="small muted" id="actionMsg"></span>
+      </div>
+      <p class="small muted" style="margin:10px 0 0">"Send" only emails people who haven't received this drop yet, so it's safe to click again.</p>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>Weekly songs: runway</h3>
+      <div id="runway" class="small muted">Checking…</div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>Members-only and early-access songs</h3>
+      <p class="small muted" style="margin:0 0 8px">Each song has an <b>access</b>: <b>public</b> (everyone), <b>members_early</b> (members now, everyone after the release date) or <b>members_only</b>. Your uploader script can create songs and send audio with <code>POST /admin/api/songs</code> and <code>PUT /admin/api/songs/&lt;slug&gt;/audio?filename=song.mp3</code> (login: any username, your ADMIN_TOKEN as the password).</p>
+      <div id="songs" class="small"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>"Cancel anytime" check</h3>
+      <p class="small muted" style="margin:0 0 8px">Members cancel through Stripe's customer portal. This checks it is switched on and allowed to cancel.</p>
+      <div class="row"><button class="btn sm ghost" id="portalCheck">Check the Stripe billing portal</button></div>
+      <div id="portalResult" class="small" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>Monthly Spotify vote</h3>
+      <p class="small muted" style="margin:0 0 6px">The top songs win when the month ends. Add them to your Spotify playlist, then tick the box.</p>
+      <div id="votes" class="small"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>Tip jar</h3>
+      <div id="tips" class="small"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>Custom chorus orders</h3>
+      <div id="chorus" class="small"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>Music store</h3>
+      <div id="store" class="small"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>Send a test email</h3>
+      <div class="row">
+        <input id="testEmail" type="email" placeholder="you@email.com">
+        <button class="btn sm ghost" id="sendTest">Send test</button>
+        <button class="btn sm ghost" id="resync">Resync all to Systeme.io</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>Recent drops</h3>
+      <table><thead><tr><th>Created</th><th>Songs</th><th>Sent to</th></tr></thead><tbody id="history"></tbody></table>
+    </div>
+  </div>
+
+  <script type="module">
+    import { $, api, el } from '/app.js';
+    let state;
+
+    const stat = (label, value) => el('div', { class: 'card stat' }, el('b', {}, String(value)), el('span', { class: 'muted small' }, label));
+    const fmt = (iso) => (iso ? new Date(iso).toLocaleString() : '—');
+
+    async function refresh() {
+      state = await api('/admin/api/stats');
+      $('#stats').replaceChildren(
+        stat('Members', state.members), stat('Free subscribers', state.leads), stat('Cancelled', state.cancelled),
+        stat('Unsubscribed', state.unsubscribed), stat('Referred signups', state.referred),
+        stat(`MRR (${state.currency})`, state.mrr.toFixed(2)),
+      );
+      const i = state.integrations;
+      $('#integrations').replaceChildren(
+        ...[['Stripe', i.stripe ? 'ready' : 'not configured'], ['Systeme.io', i.systeme ? 'ready' : 'not configured'],
+            ['YouTube', { api: 'Data API (full catalog)', feed: 'public feed, newest 15 (add an API key for all)', demo: 'demo mode', off: 'not configured' }[i.youtube]], ['Email', i.mail === 'smtp' ? 'SMTP' : 'no SMTP (saved to ./outbox)'],
+            ['Weekly schedule', i.cron]].map(([k, v]) => el('div', {}, `${k}: `, el('b', {}, v))),
+      );
+      $('#drop').replaceChildren(state.drop
+        ? el('div', {}, el('div', { class: 'small' }, `Created ${fmt(state.drop.created_at)} · ${state.drop.sent_at ? 'sent ' + fmt(state.drop.sent_at) : 'not sent yet'}`),
+            el('ol', {}, state.drop.videos.map((v) => el('li', {}, v.title))))
+        : 'No drop yet — it is created automatically the first time someone opens the unlock page, or click "Pick 3 new songs".');
+      renderSongs();
+      api('/admin/api/runway').then((r) => {
+        $('#runway').replaceChildren(
+          el('div', {}, `${r.totalSongs} songs on the channel (public, no Shorts) · ${r.alreadySent} already sent · `, el('b', {}, `${r.remaining} unsent`)),
+          el('div', { style: 'margin-top:6px' }, el('b', { style: `color:${r.warn ? '#ff8f7b' : 'var(--ok)'}` }, `${r.weeksOfRunway} weeks of runway`), ` at ${r.perWeek} songs a week`),
+          el('div', { style: `margin-top:6px;color:${r.warn ? '#ff8f7b' : 'var(--muted)'}` }, r.message));
+      }).catch((err) => { $('#runway').textContent = `Could not check: ${err.message}`; });
+      $('#votes').replaceChildren(...(state.votes.length ? state.votes : [null]).map((r) => !r
+        ? el('p', { class: 'muted' }, 'No rounds yet. The first one is created when someone opens /vote.')
+        : el('div', { style: 'padding:12px 0;border-bottom:1px solid var(--line)' },
+            el('div', {}, el('b', {}, r.label), ` · ${r.closed ? 'closed' : 'open until ' + fmt(r.endsAt)} · ${r.voters} voter${r.voters === 1 ? '' : 's'}`),
+            r.top.length
+              ? el('ol', { style: 'margin:8px 0' }, r.top.map((t) => el('li', {}, `${t.name} (${t.votes} vote${t.votes === 1 ? '' : 's'}) `,
+                  el('a', { href: t.spotifySearch, target: '_blank', rel: 'noopener' }, 'find on Spotify ↗'))))
+              : el('div', { class: 'muted', style: 'margin:6px 0' }, 'No votes yet'),
+            r.closed && r.top.length
+              ? el('label', {}, el('input', { type: 'checkbox', checked: r.onSpotify, onchange: async (e) => {
+                  try { await post('/admin/api/vote/spotify', { roundId: r.id, added: e.target.checked }); } catch (err) { $('#actionMsg').textContent = err.message; }
+                } }), ' Added to Spotify')
+              : null)));
+      const tj = state.tips;
+      const tjUsd = (c) => new Intl.NumberFormat(undefined, { style: 'currency', currency: tj.currency }).format(c / 100);
+      $('#tips').replaceChildren(
+        el('p', { style: 'margin:0 0 8px' }, `${tj.count} tip${tj.count === 1 ? '' : 's'} · ${tjUsd(tj.totalCents)} received`),
+        ...(tj.recent.length ? tj.recent : [null]).map((t) => !t
+          ? el('p', { class: 'muted' }, 'No tips yet.')
+          : el('div', { style: 'padding:10px 0;border-top:1px solid var(--line)' },
+              el('div', {}, el('b', {}, tjUsd(t.amountCents)), ` · ${fmt(t.paidAt)}`, t.name ? ` · ${t.name}` : '', t.email ? ' · ' : '', t.email ? el('a', { href: `mailto:${t.email}` }, t.email) : null),
+              t.message ? el('div', { style: 'white-space:pre-wrap;margin-top:6px;padding:10px 12px;background:var(--bg-2);border-radius:10px' }, t.message) : null)));
+      const ch = state.chorus;
+      const chUsd = (c) => new Intl.NumberFormat(undefined, { style: 'currency', currency: ch.currency }).format(c / 100);
+      $('#chorus').replaceChildren(
+        el('p', { style: 'margin:0 0 8px' }, `${ch.orders} order${ch.orders === 1 ? '' : 's'} · ${ch.toDeliver} waiting to be delivered · ${chUsd(ch.revenueCents)} taken`),
+        ...(ch.requests.length ? ch.requests : [null]).map((r) => !r
+          ? el('p', { class: 'muted' }, 'No custom chorus orders yet.')
+          : el('div', { style: 'padding:12px 0;border-top:1px solid var(--line)' },
+              el('div', {}, el('b', {}, `For ${r.forName}`), ` · ${fmt(r.paidAt)} · ${chUsd(r.amountCents || 0)} · `, r.status === 'delivered' ? 'delivered' : el('b', { style: 'color:var(--accent-2)' }, 'to deliver')),
+              el('div', { class: 'muted' }, [r.occasion, r.style].filter(Boolean).join(' · ') || 'No occasion or style chosen'),
+              el('div', { style: 'white-space:pre-wrap;margin:8px 0;padding:10px 12px;background:var(--bg-2);border-radius:10px' }, r.story),
+              el('div', {}, 'Send it to: ', el('a', { href: `mailto:${r.email}?subject=${encodeURIComponent('Your custom chorus')}` }, r.email || 'no email'), r.buyerName ? ` (${r.buyerName})` : ''),
+              el('label', { style: 'display:block;margin-top:8px' }, el('input', { type: 'checkbox', checked: r.status === 'delivered', onchange: async (e) => {
+                try { await post('/admin/api/chorus/delivered', { id: r.id, delivered: e.target.checked }); await refresh(); } catch (err) { $('#actionMsg').textContent = err.message; }
+              } }), ' Delivered'))));
+      const st = state.store;
+      const usd = (c) => new Intl.NumberFormat(undefined, { style: 'currency', currency: st.currency }).format(c / 100);
+      $('#store').replaceChildren(
+        el('p', { style: 'margin:0 0 6px' }, `${st.songs} song${st.songs === 1 ? '' : 's'} and ${st.albums} album${st.albums === 1 ? '' : 's'} for sale · ${st.orders} order${st.orders === 1 ? '' : 's'} · ${usd(st.revenueCents)} sold`),
+        el('p', { class: 'muted', style: 'margin:0 0 8px' }, 'Add music by dropping audio files into: ', el('b', {}, st.dir), ' (songs/ for songs, albums/Album Name/ for albums). No restart needed.'),
+        el('p', { style: 'margin:0 0 10px' }, el('a', { href: '/store?preview=1', target: '_blank', rel: 'noopener' }, 'Preview the store with sample items →'), el('span', { class: 'muted' }, ' (you need to have joined with your email on this browser)')),
+        ...st.recent.map((o) => el('div', { style: 'padding:6px 0;border-top:1px solid var(--line)' }, `${fmt(o.createdAt)} · ${o.email || 'no email'} · ${usd(o.amountCents)} · ${o.items.join(', ')}`)));
+      $('#history').replaceChildren(...state.history.map((h) => el('tr', {},
+        el('td', {}, fmt(h.createdAt)), el('td', {}, h.titles.join(' · ')), el('td', {}, String(h.recipients)))));
+    }
+
+    // ---- exclusive songs ----
+    const ACCESS = ['public', 'members_early', 'members_only'];
+    const toLocalInput = (iso) => { const d = new Date(iso); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
+    const say = (text) => { $('#actionMsg').textContent = text; };
+
+    function songRow(s) {
+      const access = el('select', {}, ACCESS.map((a) => el('option', { value: a, selected: a === s.access }, a)));
+      const when = el('input', { type: 'datetime-local', value: s.publicReleaseAt ? toLocalInput(s.publicReleaseAt) : '' });
+      const file = el('input', { type: 'file', accept: 'audio/*' });
+      file.onchange = async () => {
+        const f = file.files[0]; if (!f) return;
+        say(`Uploading ${f.name}…`);
+        const res = await fetch(`/admin/api/songs/${encodeURIComponent(s.slug)}/audio?filename=${encodeURIComponent(f.name)}`, { method: 'PUT', headers: { 'Content-Type': f.type || 'application/octet-stream' }, body: f });
+        const data = await res.json().catch(() => ({}));
+        say(res.ok ? 'Audio uploaded.' : data.error || 'Upload failed.');
+        await refresh();
+      };
+      const save = el('button', { class: 'btn sm ghost', type: 'button', onclick: async () => {
+        try {
+          await post('/admin/api/songs', { slug: s.slug, title: s.title, access: access.value, public_release_at: when.value ? new Date(when.value).toISOString() : null, youtube_video_id: s.youtubeId, thumb: s.thumb });
+          say('Saved.'); await refresh();
+        } catch (err) { say(err.message); }
+      } }, 'Save');
+      const del = el('button', { class: 'btn sm ghost', type: 'button', onclick: async () => {
+        if (!confirm(`Delete "${s.title}" and its audio?`)) return;
+        try { await post('/admin/api/songs/delete', { slug: s.slug }); await refresh(); } catch (err) { say(err.message); }
+      } }, 'Delete');
+      return el('div', { style: 'padding:12px 0;border-top:1px solid var(--line)' },
+        el('div', {}, el('b', {}, s.title), el('span', { class: 'muted' }, `  ${s.slug} · ${s.hasAudio ? 'audio uploaded' : s.youtubeId ? 'YouTube video' : 'no audio yet'}`)),
+        el('div', { class: 'row', style: 'margin-top:8px' }, access, el('label', {}, 'public on ', when), file, save, del));
+    }
+
+    function renderSongs() {
+      const sg = state.songs;
+      const title = el('input', { placeholder: 'Song title' });
+      const slug = el('input', { placeholder: 'slug (optional)' });
+      const access = el('select', {}, ACCESS.map((a) => el('option', { value: a }, a)));
+      const when = el('input', { type: 'datetime-local' });
+      const yt = el('input', { placeholder: 'YouTube video ID (optional)' });
+      const add = el('button', { class: 'btn sm', type: 'button', onclick: async () => {
+        try {
+          await post('/admin/api/songs', { title: title.value, slug: slug.value || undefined, access: access.value, public_release_at: when.value ? new Date(when.value).toISOString() : null, youtube_video_id: yt.value || null });
+          say('Song added. Now upload its audio.'); await refresh();
+        } catch (err) { say(err.message); }
+      } }, 'Add song');
+      $('#songs').replaceChildren(
+        el('p', { style: 'margin:0 0 4px' }, `${sg.exclusive} song${sg.exclusive === 1 ? ' is' : 's are'} not public. The "new songs before they go public" line only appears on the site once there are ${sg.needed}${sg.exclusive >= sg.needed ? ' (it is showing now)' : ''}.`),
+        ...(sg.list.length ? sg.list.map(songRow) : [el('p', { class: 'muted' }, 'No songs yet.')]),
+        el('div', { style: 'padding:12px 0;border-top:1px solid var(--line)' }, el('b', {}, 'Add a song'),
+          el('div', { class: 'row', style: 'margin-top:8px' }, title, slug, access, el('label', {}, 'public on ', when), yt, add)));
+    }
+
+    $('#portalCheck').onclick = async (e) => {
+      const out = $('#portalResult'); e.target.disabled = true; out.textContent = 'Checking Stripe…';
+      try {
+        const r = await post('/admin/api/portal-check');
+        out.replaceChildren(
+          el('div', {}, el('b', { style: `color:${r.ok ? 'var(--ok)' : '#ff8f7b'}` }, r.ok ? 'Ready: members can cancel from the portal.' : r.problem)),
+          r.ok ? el('div', { class: 'muted' }, `Cancellation: ${r.cancelMode === 'immediately' ? 'immediately' : 'at the end of the billing period'} · update card: ${r.updatePaymentMethod ? 'on' : 'off'} · invoice history: ${r.invoiceHistory ? 'on' : 'off'}`) : null,
+          ...(r.steps.length ? [el('div', { style: 'margin-top:6px' }, 'To fix it:'), el('ol', {}, r.steps.map((t) => el('li', {}, t)))] : []));
+      } catch (err) { out.textContent = err.message; }
+      e.target.disabled = false;
+    };
+
+    async function act(button, fn, done) {
+      const msg = $('#actionMsg'); button.disabled = true; msg.textContent = 'Working…';
+      try { msg.textContent = done(await fn()); await refresh(); } catch (e) { msg.textContent = e.message; }
+      button.disabled = false;
+    }
+    const post = (path, body = {}) => api(path, { method: 'POST', body });
+
+    $('#newDrop').onclick = (e) => act(e.target, () => post('/admin/api/drop/new'), () => 'New drop picked.');
+    $('#sendDrop').onclick = (e) => {
+      if (!state.drop) return ($('#actionMsg').textContent = 'No drop to send yet.');
+      if (!confirm('Email this drop to every eligible subscriber now?')) return;
+      act(e.target, () => post('/admin/api/drop/send', { dropId: state.drop.id }), (r) => `Sent ${r.sent}, failed ${r.failed}.`);
+    };
+    $('#sendTest').onclick = (e) => act(e.target, () => post('/admin/api/test', { email: $('#testEmail').value }), () => 'Test email sent.');
+    $('#resync').onclick = (e) => act(e.target, () => post('/admin/api/resync'), (r) => `Queued ${r.queued} contacts.`);
+
+    refresh();
+  </script>
+</body>
+</html>

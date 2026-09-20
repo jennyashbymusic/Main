@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Custom Chorus — {brand}</title>
+  <meta name="description" content="Tell Jenny Ashby your story and get a custom chorus made just for you.">
+  <link rel="icon" href="/img/jenny-avatar.jpg">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="topbar" hidden></div>
+
+  <header class="banner-full">
+    <div class="banner-box"><div class="banner-inner"><a class="banner-home" href="/" aria-label="Jenny Ashby home"><img class="banner" src="/img/jenny-ashby-header.jpg" width="1600" height="608" alt="Jenny Ashby — Dark Country, Real Stories"></a></div></div>
+  </header>
+
+  <div class="page-box">
+    <div class="page-body narrow">
+    <main style="padding:14px 0 70px" id="app">
+      <p class="muted">Loading…</p>
+    </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { $, api, el, applyBranding, mountNav, param, money } from '/app.js';
+    applyBranding();
+    mountNav('chorus', { publicBar: true }); // members see the tabs; visitors get a slim bar with the brand and "Join free"
+
+    const app = $('#app');
+    let info = null; // price, turnaround and the option lists from /api/links
+
+    // ---- after paying: Stripe sends the buyer back here with ?session_id= ----
+    async function confirmPayment(sessionId, attempt = 0) {
+      try {
+        const r = await api(`/api/chorus/thanks?session_id=${encodeURIComponent(sessionId)}`);
+        history.replaceState(null, '', '/chorus');
+        app.replaceChildren(
+          el('p', { class: 'eyebrow' }, 'Request received'),
+          el('h1', {}, 'Thank you! ', el('span', { class: 'grad' }, '🎤')),
+          el('p', { class: 'lead' }, `Your custom chorus for ${r.forName} is in. We emailed a confirmation to ${r.email}, and Jenny will email your chorus to that address${r.turnaround ? `, ${r.turnaround}` : ''}.`),
+          el('div', { class: 'row', style: 'gap:12px' },
+            el('a', { class: 'btn', href: '/' }, 'Back to the main site'),
+            el('a', { class: 'btn ghost', href: '/links' }, 'Jenny\'s links')));
+      } catch (err) {
+        if (attempt < 4) { await new Promise((r) => setTimeout(r, 2000)); return confirmPayment(sessionId, attempt + 1); }
+        app.replaceChildren(
+          el('h1', {}, 'Almost ', el('span', { class: 'grad' }, 'there')),
+          el('p', { class: 'lead' }, `${err.message} If you were charged, your request is saved and a confirmation email is on its way.`));
+      }
+    }
+
+    // ---- the order form ----
+    // A sample so buyers can see what they are paying for. Replace it with a real chorus of Jenny's whenever you like.
+    const SAMPLE = {
+      story: 'Our 10th anniversary. We met at a gas station outside Amarillo, and he still can\'t parallel park.',
+      lines: ['Met you at a pump outside Amarillo,', 'Ten years later, still don\'t wanna let go.', 'You can\'t parallel park to save your soul,', 'But baby, you\'re the only road I know.'],
+    };
+
+    // Every label is tied to its control (click the label, screen readers announce it). Required fields get a gold * and are announced.
+    const field = (label, control, { hint, required = false } = {}) => {
+      control.id = 'f-' + control.name;
+      if (required) control.setAttribute('aria-required', 'true');
+      const lab = el('label', {}, label,
+        required ? el('span', { class: 'req', 'aria-hidden': 'true' }, ' *') : null,
+        required ? el('span', { class: 'sr-only' }, ' (required)') : null,
+        hint ? el('span', { class: 'hint' }, ' ' + hint) : null);
+      lab.htmlFor = control.id;
+      return el('div', { class: 'field' }, lab, control);
+    };
+    const picker = (name, options, blank) =>
+      el('select', { name }, el('option', { value: '' }, blank), options.map((o) => el('option', { value: o }, o)));
+
+    function expectations() {
+      const rows = [
+        info.turnaround ? ['Turnaround', 'Delivered ' + info.turnaround + '.'] : null,
+        info.delivery ? ['What you get', info.delivery] : null,
+        info.refund ? ['Refunds', info.refund] : null,
+      ].filter(Boolean);
+      return el('section', { class: 'card expect', 'aria-labelledby': 'expectTitle', style: 'margin-top:20px' },
+        el('h2', { id: 'expectTitle' }, 'What to expect'),
+        el('dl', {}, rows.map(([dt, dd]) => el('div', {}, el('dt', {}, dt), el('dd', {}, dd)))),
+        el('figure', { class: 'sample', style: 'margin-inline:0;margin-bottom:0' },
+          el('p', { class: 'sample-ask' }, el('b', {}, 'Example. '), 'A request like this: "' + SAMPLE.story + '"'),
+          el('blockquote', {}, SAMPLE.lines.flatMap((line, i) => (i ? [el('br'), line] : [line]))),
+          el('p', { class: 'sample-note' }, 'A sample of the kind of chorus you get, written for a made-up request. Yours is written from your story.')));
+    }
+
+    function renderForm() {
+      const price = money(info.priceCents, info.currency);
+      const forName = el('input', { name: 'forName', type: 'text', maxlength: '80', required: true, placeholder: 'e.g. Sam, my mom, Jake and Lily' });
+      const buyerName = el('input', { name: 'buyerName', type: 'text', maxlength: '80', placeholder: 'So Jenny knows who it is from' });
+      const story = el('textarea', { name: 'story', maxlength: '1200', required: true, placeholder: 'Names, memories, places, a line you want in it, how you want it to feel. The more real detail, the better the chorus.' });
+      const counter = el('div', { class: 'counter' }, '0 / 1200');
+      story.addEventListener('input', () => { counter.textContent = story.value.length + ' / 1200'; });
+      const occasion = picker('occasion', info.occasions, 'Choose one (optional)');
+      const style = picker('style', info.styles, 'Choose one (optional)');
+      const msg = el('div', { class: 'msg', role: 'alert' });
+      const button = el('button', { class: 'btn big', type: 'submit' }, 'Continue to payment · ' + price + ' →');
+      const form = el('form', { novalidate: true },
+        el('p', { class: 'req-note' }, el('span', { class: 'req', 'aria-hidden': 'true' }, '* '), 'Required'),
+        field('Who is it for?', forName, { required: true }),
+        el('div', { class: 'form-row' }, field('Occasion', occasion), field('Style', style)),
+        field('Tell Jenny the story', story, { hint: '(a couple of sentences or more)', required: true }), counter,
+        field('Your name', buyerName, { hint: '(optional)' }),
+        button, msg,
+        info.refund ? el('p', { class: 'muted small center', style: 'margin:8px 0 0' }, 'By continuing you agree to the delivery and refund terms above.') : null,
+        el('p', { class: 'muted small center', style: 'margin:8px 0 0' }, '🔒 Secure checkout by Stripe. We collect your email there, and that is where your chorus is sent.'));
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        msg.textContent = '';
+        // Say which required fields are empty instead of waiting for the server to refuse.
+        const empty = [forName, story].filter((f) => !f.value.trim());
+        [forName, story].forEach((f) => f.setAttribute('aria-invalid', String(empty.includes(f))));
+        if (empty.length) {
+          msg.textContent = 'Please fill in the fields marked with *.'; msg.className = 'msg err';
+          empty[0].focus();
+          return;
+        }
+        button.disabled = true; button.textContent = 'Opening secure checkout…';
+        try {
+          const { url } = await api('/api/chorus/checkout', {
+            method: 'POST',
+            body: { forName: forName.value, buyerName: buyerName.value, story: story.value, occasion: occasion.value, style: style.value },
+          });
+          location.href = url;
+        } catch (err) {
+          msg.textContent = err.message; msg.className = 'msg err';
+          button.disabled = false; button.textContent = 'Continue to payment · ' + price + ' →';
+        }
+      });
+
+      app.replaceChildren(
+        el('p', { class: 'eyebrow' }, 'Custom chorus'),
+        el('h1', { style: 'font-size:clamp(30px,6vw,46px)' }, 'A chorus made ', el('span', { class: 'grad' }, 'just for you')),
+        el('p', { class: 'lead', style: 'margin-bottom:8px' }, 'Tell Jenny your story and she\'ll turn it into a chorus, delivered to your email. ' + price + (info.turnaround ? ' · delivered ' + info.turnaround : '') + '.'),
+        expectations(),
+        el('div', { class: 'card', style: 'margin-top:20px' }, form),
+        el('p', { class: 'pagefoot' }, el('a', { href: '/' }, '← Back to the main site'), el('a', { href: '/links' }, 'Jenny\'s links')));
+    }
+
+    async function start() {
+      const sessionId = param('session_id');
+      if (sessionId) {
+        app.replaceChildren(el('h1', {}, 'Confirming your ', el('span', { class: 'grad' }, 'payment…')));
+        return confirmPayment(sessionId);
+      }
+      try {
+        info = (await api('/api/links')).chorus;
+        renderForm();
+      } catch (err) {
+        app.replaceChildren(el('h1', {}, 'Something ', el('span', { class: 'grad' }, 'went wrong')), el('p', { class: 'lead' }, err.message));
+      }
+    }
+    start();
+  </script>
+</body>
+</html>

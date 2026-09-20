@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Confirm your email — {brand}</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/img/jenny-avatar.jpg">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="banner-full">
+    <div class="banner-box"><div class="banner-inner"><a class="banner-home" href="/" aria-label="Jenny Ashby home"><img class="banner" src="/img/jenny-ashby-header.jpg" width="1600" height="608" alt="Jenny Ashby — Dark Country, Real Stories"></a></div></div>
+  </header>
+
+  <div class="page-box">
+    <div class="page-body narrow">
+    <main class="center" style="padding:40px 0 80px" id="app">
+      <h1 style="font-size:clamp(28px,5vw,42px)">Confirm your <span class="grad">email</span></h1>
+      <p class="lead" style="margin-inline:auto">One click and the friends you invite will count toward your unlocks.</p>
+      <button class="btn" id="go">Confirm my email</button>
+      <div class="msg err" id="msg"></div>
+    </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { $, api, el, applyBranding, param } from '/app.js';
+    applyBranding();
+
+    // A button (not a confirmation on page load) so email security scanners that prefetch links can't confirm for people.
+    $('#go').addEventListener('click', async () => {
+      try {
+        const { unlockUrl } = await api(`/api/confirm?t=${encodeURIComponent(param('t') || '')}`, { method: 'POST' });
+        $('#app').replaceChildren(
+          el('h1', { style: 'font-size:clamp(28px,5vw,42px)' }, "You're confirmed ", el('span', { class: 'grad' }, '✓')),
+          el('p', { class: 'lead', style: 'margin-inline:auto' }, 'Thank you. Friends who join through your link now count toward your unlocks.'),
+          el('a', { class: 'btn', href: unlockUrl }, 'Open my songs →'));
+      } catch (err) { $('#msg').textContent = err.message; }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy — {brand}</title>
+  <meta name="description" content="How Jenny Ashby's fan club site collects, uses and protects your information.">
+  <link rel="icon" href="/img/jenny-avatar.jpg">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="topbar" hidden></div>
+
+  <header class="banner-full">
+    <div class="banner-box"><div class="banner-inner"><a class="banner-home" href="/" aria-label="Jenny Ashby home"><img class="banner" src="/img/jenny-ashby-header.jpg" width="1600" height="608" alt="Jenny Ashby — Dark Country, Real Stories"></a></div></div>
+  </header>
+
+  <div class="page-box">
+    <div class="page-body narrow">
+      <!-- This page describes what the site actually does today. It is a plain-language starting point, not legal advice:
+           have a lawyer look it over before launch, especially if you have fans in the EU, UK or California. -->
+      <main class="legal">
+        <p class="eyebrow">Privacy</p>
+        <h1>Your information, <span class="grad">in plain words</span></h1>
+        <p class="updated">Last updated: September 2026</p>
+
+        <h2>What this site is</h2>
+        <p>This is <span data-brand>Jenny Ashby</span>'s fan club and music site. It lets you join a free email list, vote on songs, buy music, and order a custom chorus. This page explains what we collect and why.</p>
+
+        <h2>What we collect</h2>
+        <ul>
+          <li><b>Your email address</b>, when you join the list or buy something, plus when and where on the site you agreed to get emails.</li>
+          <li><b>Who invited you</b>, if you joined through a friend's link, so your friend gets credit for the invite.</li>
+          <li><b>Your votes</b> in the monthly Spotify vote. The public leaderboard shows only totals, never who voted for what.</li>
+          <li><b>Orders:</b> what you bought, the amount, and the payment reference from Stripe. We never see or store your card number.</li>
+          <li><b>Tips:</b> the amount, the name and note you choose to add, and your email from Stripe, so we can thank you.</li>
+          <li><b>Custom Chorus requests:</b> the names, occasion and story you type into the form, so the chorus can be written.</li>
+          <li><b>A small note in your browser</b> (local storage) that remembers your personal link and, if you came from a friend's link, who invited you. It is not used for advertising.</li>
+        </ul>
+
+        <h2>How we use it</h2>
+        <ul>
+          <li>To send you the songs and emails you signed up for, including your weekly songs, receipts and download links.</li>
+          <li>To run the club: unlocking songs, counting votes, managing memberships, and delivering what you order.</li>
+          <li>To keep the site safe, for example to stop fake sign-ups and repeat votes.</li>
+        </ul>
+        <p>We only email you about Jenny's music, your orders and your membership. Every list email has an unsubscribe link that works immediately. We don't sell your email address.</p>
+
+        <h2>Who helps us run the site</h2>
+        <p>We use a few services, and they only get what they need to do their job:</p>
+        <ul>
+          <li><b>Stripe</b> takes payments and runs the "Manage subscription" page.</li>
+          <li><b>Systeme.io</b> holds our email list and tags (for example, who is a member).</li>
+          <li><b>An email delivery service</b> sends our emails.</li>
+          <li><b>YouTube.</b> Videos and songs on this site play in YouTube's privacy-enhanced player, which does not set tracking cookies until you press play. When you do, YouTube's own policies apply.</li>
+          <li><b>Our web host</b> stores the site's data securely.</li>
+        </ul>
+
+        <h2>Cookies and tracking</h2>
+        <p>This site has no advertising trackers or analytics of its own. Stripe's checkout and YouTube's players may use their own cookies under their own policies.</p>
+
+        <h2>How long we keep things</h2>
+        <p>We keep your information while you're on the list or a member. If you unsubscribe, we keep your email address on a do-not-email list so we don't email you again by mistake. Order records are kept as long as needed for accounting and support.</p>
+
+        <h2>Your choices</h2>
+        <ul>
+          <li><b>Unsubscribe</b> from any email with the link at the bottom.</li>
+          <li><b>Cancel your membership</b> any time from "Manage subscription" on your Invite page.</li>
+          <li><b>Ask to see, correct or delete</b> what we hold about you: <a data-contact-link="Contact us" href="#" hidden>Contact us</a><span data-no-contact>reply to any email we've sent you</span>.</li>
+        </ul>
+
+        <h2>Children</h2>
+        <p>This site is not meant for children under 13, and we don't knowingly collect their information.</p>
+
+        <h2>Changes</h2>
+        <p>If we change how we handle your information, we'll update this page and the date above.</p>
+
+        <p style="margin-top:30px"><a href="/">← Back to the home page</a> · <a href="/terms">Terms</a></p>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { applyBranding, mountNav } from '/app.js';
+    applyBranding();
+    mountNav(null, { publicBar: true });
+  </script>
+</body>
+</html>

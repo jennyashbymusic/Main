@@ -1,0 +1,15 @@
+node_modules/
+.env
+data/
+outbox/
+
+# music store audio files (private)
+store/songs/*
+store/albums/*
+!store/songs/.gitkeep
+!store/albums/.gitkeep
+
+# local-only files (not needed on the server)
+Launch Jenny Ashby Site.bat
+ChatGPT Image*.png
+.DS_Store

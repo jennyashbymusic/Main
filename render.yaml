@@ -1,0 +1,67 @@
+# Render "Blueprint": tells Render how to run this site. In Render: New + > Blueprint > pick your GitHub repo.
+# Render reads this file, creates the service and the disk, and asks you for the secret values marked "sync: false".
+# The full step-by-step guide is in DEPLOY.md.
+services:
+  - type: web
+    name: jenny-ashby-site
+    runtime: node
+    # "starter" is the cheapest plan that supports a persistent disk. The free plan has no disk (your subscribers, votes and
+    # orders would be wiped on every deploy) and it goes to sleep, which would also miss the Monday-morning song email.
+    plan: starter
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeploy: true # every time you push a change to GitHub, Render redeploys
+
+    # The database (SQLite), email previews, members-only songs and the shop's music live here. It survives deploys and restarts.
+    disk:
+      name: club-data
+      mountPath: /var/data
+      sizeGB: 1 # room for the database and a few hundred MP3s. You can make it bigger later in Render (it cannot be made smaller).
+
+    envVars:
+      # ---- fixed settings (already right, nothing to fill in) ----
+      - key: NODE_VERSION
+        value: 22 # the built-in database needs Node 22.13 or newer
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "true"
+      - key: DATA_DIR
+        value: /var/data
+      - key: MEMBERS_AUDIO_DIR
+        value: /var/data/members-audio
+      - key: STORE_DIR
+        value: /var/data/store
+      - key: SMTP_PORT
+        value: "587"
+
+      # ---- your secrets: Render will ask you for each of these when you create the Blueprint (see .env for where to find them) ----
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false # you get this after the first deploy (DEPLOY.md, step 5). Enter anything for now, then update it.
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: FROM_EMAIL
+        sync: false
+      - key: POSTAL_ADDRESS
+        sync: false
+      - key: ADMIN_TOKEN
+        sync: false
+      - key: CONTACT_EMAIL
+        sync: false
+      - key: NOTIFY_EMAIL
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: SYSTEME_API_KEY
+        sync: false
+      # Your own domain, for example https://jennyashby.com. Leave it empty on the first deploy: the site then uses the
+      # address Render gives it (https://jenny-ashby-site.onrender.com).
+      - key: BASE_URL
+        sync: false

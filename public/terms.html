@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Terms — {brand}</title>
+  <meta name="description" content="The simple rules for Jenny Ashby's fan club: membership, voting, the music store and custom choruses.">
+  <link rel="icon" href="/img/jenny-avatar.jpg">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="topbar" hidden></div>
+
+  <header class="banner-full">
+    <div class="banner-box"><div class="banner-inner"><a class="banner-home" href="/" aria-label="Jenny Ashby home"><img class="banner" src="/img/jenny-ashby-header.jpg" width="1600" height="608" alt="Jenny Ashby — Dark Country, Real Stories"></a></div></div>
+  </header>
+
+  <div class="page-box">
+    <div class="page-body narrow">
+      <!-- A plain-language starting point that matches how the site works today. It is not legal advice: have a lawyer review it
+           before launch, and add the governing law / where disputes are handled for your location. -->
+      <main class="legal">
+        <p class="eyebrow">Terms</p>
+        <h1>The simple <span class="grad">rules</span></h1>
+        <p class="updated">Last updated: September 2026</p>
+
+        <p>By using this site you agree to these terms. They're short on purpose.</p>
+
+        <h2>The club and membership</h2>
+        <p>Joining the list is free. Membership costs <span data-price>$5</span> a month, is billed by Stripe each month until you cancel, and gives you all of each week's songs at once and more votes. You can cancel any time from "Manage subscription" on your Invite page. Cancelling stops future charges.</p>
+
+        <h2>Invites and free unlocks</h2>
+        <p>A friend counts toward your unlocks once they join through your link with their own real email address and confirm it. Fake, duplicate or self-referred sign-ups don't count, and we may remove unlocks gained that way.</p>
+
+        <h2>Voting</h2>
+        <p>Each month there's a vote on which songs go on Spotify. Everyone who joins gets <span data-votes-free>1 vote</span> and members get <span data-votes-member>3 votes</span>. We may remove votes that look fake or abusive. The top <span data-winners>3 songs</span> are added to Jenny's Spotify once the ballot closes, at Jenny's discretion and timing.</p>
+
+        <h2>The music store</h2>
+        <p>Songs and albums are digital downloads. After you pay you get private download links, each usable up to <span data-download-limit>10</span> times. Your purchase is for your personal listening. Please don't share, resell or upload the files anywhere else.</p>
+
+        <h2>Custom Chorus</h2>
+        <p>A Custom Chorus is a one-off piece written for you. The price, delivery time, what you receive and the refund terms are shown on the <a href="/chorus">Custom Chorus page</a> before you pay, and they apply to your order.</p>
+
+        <h2>Tips</h2>
+        <p>The <a href="/tip-jar">Tip Jar</a> takes one-time tips of the amount you choose. A tip is a voluntary gift to support Jenny's music, not a purchase of goods or services, so it doesn't come with membership or downloads. Tips aren't tax-deductible, and aren't refundable except where the law requires it or if we charged you by mistake.</p>
+
+        <h2>Music and content</h2>
+        <p>The songs, images and text on this site belong to <span data-brand>Jenny Ashby</span> or are used with permission. You're welcome to listen and share links. Please don't copy or redistribute them.</p>
+
+        <h2>Using the site</h2>
+        <p>Please don't try to break the site, get around limits (like one vote per song), or use it to send spam or harm anyone. We may suspend accounts that do.</p>
+
+        <h2>Limits</h2>
+        <p>We do our best to keep everything running, but the site is provided as it is, and we can't promise it will always be available or error-free. To the extent the law allows, our responsibility for any problem is limited to what you paid us.</p>
+
+        <h2>Changes and contact</h2>
+        <p>We may update these terms and will change the date above when we do. Questions? <a data-contact-link="Contact us" href="#" hidden>Contact us</a><span data-no-contact>reply to any email we've sent you</span>. See also the <a href="/privacy">Privacy page</a>.</p>
+
+        <p style="margin-top:30px"><a href="/">← Back to the home page</a></p>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { applyBranding, mountNav } from '/app.js';
+    applyBranding();
+    mountNav(null, { publicBar: true });
+  </script>
+</body>
+</html>

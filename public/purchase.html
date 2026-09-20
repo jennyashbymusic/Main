@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your music — {brand}</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/img/jenny-avatar.jpg">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="topbar" hidden></div>
+
+  <header class="banner-full">
+    <div class="banner-box"><div class="banner-inner"><a class="banner-home" href="/" aria-label="Jenny Ashby home"><img class="banner" src="/img/jenny-ashby-header.jpg" width="1600" height="608" alt="Jenny Ashby — Dark Country, Real Stories"></a></div></div>
+  </header>
+
+  <div class="page-box">
+
+  <div class="page-body">
+    <main style="padding:34px 0 80px" id="app">
+      <p class="muted">Loading your music…</p>
+    </main>
+  </div>
+  </div>
+
+  <script type="module">
+    import { $, api, el, applyBranding, mountNav, param, money } from '/app.js';
+    applyBranding();
+    mountNav('store'); // buyers are members, so the tabs show if they are signed in on this browser
+
+    const app = $('#app');
+    let thanks = false;
+
+    const fail = (heading, text) => app.replaceChildren(el('h1', {}, heading[0], el('span', { class: 'grad' }, heading[1])), el('p', { class: 'lead' }, text));
+
+    // Coming back from Stripe: turn the payment into an order (the webhook may not have landed yet).
+    async function orderToken(attempt = 0) {
+      const direct = param('o');
+      if (direct) return direct;
+      const sessionId = param('session_id');
+      if (!sessionId) throw new Error('This page needs the link from your receipt email.');
+      try {
+        const { token } = await api(`/api/store/thanks?session_id=${encodeURIComponent(sessionId)}`);
+        thanks = true;
+        history.replaceState(null, '', `/purchase?o=${encodeURIComponent(token)}`); // a bookmarkable link
+        return token;
+      } catch (err) {
+        if (attempt < 4) { await new Promise((r) => setTimeout(r, 2000)); return orderToken(attempt + 1); }
+        throw err;
+      }
+    }
+
+    const dl = (token, item, track) => `/download/${encodeURIComponent(token)}/${encodeURIComponent(item.id)}${track === undefined ? '' : `/${track}`}`;
+
+    function itemCard(token, item) {
+      const body = [el('div', { class: 'row', style: 'justify-content:space-between;gap:12px' },
+        el('div', {}, el('h3', { style: 'margin:0' }, item.title), el('span', { class: 'small muted' }, item.kind === 'album' ? `Album · ${item.tracks.length} tracks` : 'Song')),
+        !item.available
+          ? el('span', { class: 'small muted' }, 'Temporarily unavailable. Please contact us.')
+          : el('a', { class: 'btn sm', href: dl(token, item), download: '' }, item.kind === 'album' ? 'Download album (.zip)' : 'Download'))];
+      if (item.kind === 'album' && item.available) {
+        body.push(el('details', { style: 'margin-top:12px' }, el('summary', { class: 'small muted' }, 'Download single tracks'),
+          el('ol', { class: 'tracklist' }, item.tracks.map((t) => el('li', {}, el('a', { href: dl(token, item, t.index), download: '' }, t.title))))));
+      }
+      return el('div', { class: 'card', style: 'margin-bottom:12px' }, body);
+    }
+
+    async function main() {
+      let token;
+      try { token = await orderToken(); } catch (err) { return fail(['Almost ', 'there'], `${err.message} If you were charged, your receipt email has your download link.`); }
+      let order;
+      try { order = await api(`/api/store/order?o=${encodeURIComponent(token)}`); } catch (err) { return fail(['Hmm, that link ', "isn't working"], err.message); }
+
+      app.replaceChildren(
+        el('p', { class: 'eyebrow' }, thanks ? 'Payment received' : 'Your purchase'),
+        el('h1', {}, thanks ? 'Thank you! ' : 'Your ', el('span', { class: 'grad' }, thanks ? '🎶' : 'music')),
+        el('p', { class: 'lead', style: 'margin-bottom:22px' }, thanks ? `We also emailed a receipt with this link to ${order.email}. Keep it safe.` : `Order for ${order.email}, ${new Date(order.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}.`),
+        ...order.items.map((item) => itemCard(token, item)),
+        el('p', { class: 'small muted', style: 'margin-top:18px' }, `Total ${money(order.totalCents, order.currency)}. Each file can be downloaded up to ${order.limit} times, so save your music somewhere safe. `,
+          el('a', { href: '/store' }, 'Back to the store →')));
+    }
+    main();
+  </script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spotify Leaderboard — {brand}</title>
+  <meta name="description" content="Live standings: which Jenny Ashby songs are winning this month's vote to be added to Spotify.">
+  <meta property="og:title" content="Jenny Ashby — Spotify leaderboard">
+  <meta property="og:description" content="Live standings for this month's vote. Which songs make it to Spotify?">
+  <meta property="og:image" content="%BASE_URL%/img/jenny-ashby-share.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="/img/jenny-avatar.jpg">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="topbar" hidden></div>
+
+  <header class="banner-full">
+    <div class="banner-box"><div class="banner-inner"><a class="banner-home" href="/" aria-label="Jenny Ashby home"><img class="banner" src="/img/jenny-ashby-header.jpg" width="1600" height="608" alt="Jenny Ashby — Dark Country, Real Stories"></a></div></div>
+  </header>
+
+  <div class="page-box">
+
+  <div class="page-body">
+    <main style="padding:34px 0 70px" id="app">
+      <p class="muted">Loading the standings…</p>
+    </main>
+  </div>
+  </div>
+
+  <script type="module">
+    import { $, api, el, applyBranding, getToken, mountNav } from '/app.js';
+    import { plural, renderBoard, shareBlock, spotifyRule } from '/board.js';
+    applyBranding();
+    mountNav('leaderboard', { publicBar: true }); // public page: visitors get a slim bar with "Join free", members get the tabs
+
+    const token = getToken();
+    const app = $('#app');
+    let state = null;
+    let offset = 0; // server clock minus this device's clock
+    let reloading = false;
+    let share = null; // the share block is built once, so a refresh doesn't wipe "Copied ✓" or a selected link
+
+    // A public page: anyone can see it. A remembered token only adds the "your vote" ticks.
+    const timeLeft = () => {
+      const s = Math.max(0, Math.floor((Date.parse(state.round.endsAt) - (Date.now() + offset)) / 1000));
+      const d = Math.floor(s / 86400), h = Math.floor(s / 3600) % 24, m = Math.floor(s / 60) % 60, sec = s % 60;
+      return { s, text: `${d}d ${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m ${String(sec).padStart(2, '0')}s` };
+    };
+    function tick() {
+      if (!state?.round) return;
+      const { s, text } = timeLeft();
+      const n = $('#timer'); if (n) n.textContent = text;
+      if (s === 0 && !reloading) { reloading = true; setTimeout(async () => { await load(); reloading = false; }, 1500); } // a new round opens
+    }
+    setInterval(tick, 1000);
+
+    function render() {
+      const s = state;
+      app.replaceChildren();
+      if (!s.ready) {
+        app.append(el('h1', {}, 'Leaderboard ', el('span', { class: 'grad' }, 'opening soon')),
+          el('p', { class: 'lead' }, "We're setting up this month's ballot. Check back in a little while."));
+        return;
+      }
+      app.append(
+        el('p', { class: 'eyebrow' }, `${s.round.label} · Spotify vote`),
+        el('h1', {}, 'Who is winning the ', el('span', { class: 'grad' }, 'Spotify vote?')),
+        el('p', { class: 'lead', style: 'margin-bottom:18px' }, `${spotifyRule(s)} These are the live standings.`),
+        el('div', { class: 'row', style: 'gap:14px;margin-bottom:22px' },
+          el('span', { class: 'timer-pill' }, 'Next voting round in ', el('b', { id: 'timer' }, '')),
+          // Voting is part of the members area: visitors join free first, members go straight to the ballot.
+          token ? el('a', { class: 'btn', href: '/vote' }, 'Cast your vote →') : el('a', { class: 'btn', href: '/' }, 'Join free to vote →')),
+        renderBoard(s, { footer: (share ??= shareBlock(s.shareUrl || `${location.origin}/leaderboard`)) }));
+
+      if (s.previous) {
+        const pv = s.previous;
+        app.append(el('section', { class: 'card', style: 'margin-top:24px' },
+          el('h2', { style: 'font-size:24px' }, `${pv.label} winners`),
+          pv.winners.length
+            ? el('ol', { class: 'winners' }, pv.winners.map((w) => el('li', {}, el('span', {}, w.name), el('small', { class: 'muted' }, plural(w.votes, 'vote')))))
+            : el('p', { class: 'muted' }, 'No votes were cast that round.'),
+          el('p', { class: 'small', style: 'margin:14px 0 0' },
+            pv.winners.length ? el('span', { class: pv.onSpotify ? 'pill' : 'pill red' }, pv.onSpotify ? 'On Spotify ✓' : 'Heading to Spotify soon') : null,
+            ' ', s.spotifyUrl ? el('a', { href: s.spotifyUrl, target: '_blank', rel: 'noopener' }, 'Open the Spotify playlist ↗') : null)));
+      }
+      tick();
+    }
+
+    async function load() {
+      try {
+        state = await api(`/api/vote${token ? `?t=${encodeURIComponent(token)}` : ''}`);
+        offset = Date.parse(state.now) - Date.now();
+        render();
+      } catch (err) {
+        app.replaceChildren(el('h1', {}, 'Something ', el('span', { class: 'grad' }, 'went wrong')), el('p', { class: 'lead' }, err.message));
+      }
+    }
+    load();
+    setInterval(() => { if (!document.hidden) load(); }, 15000); // standings refresh on their own
+  </script>
+</body>
+</html>

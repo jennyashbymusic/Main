@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Become a member — {brand}</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/img/jenny-avatar.jpg">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="topbar" hidden></div>
+
+  <header class="banner-full">
+    <div class="banner-box"><div class="banner-inner"><a class="banner-home" href="/" aria-label="Jenny Ashby home"><img class="banner" src="/img/jenny-ashby-header.jpg" width="1600" height="608" alt="Jenny Ashby — Dark Country, Real Stories"></a></div></div>
+  </header>
+
+  <div class="page-box">
+
+  <div class="page-body">
+    <main class="split" style="padding:40px 0 60px">
+      <div>
+        <div class="notice" id="notice" hidden></div>
+        <p class="eyebrow">You're on the list</p>
+        <h1 style="font-size:clamp(32px,5.4vw,50px)">Now get every song,<br><span class="grad">every week.</span></h1>
+        <p class="lead">Members get all <span data-songs>3</span> songs every week, instantly, with no inviting or waiting.</p>
+        <ul class="ticks">
+          <li><b><span data-songs>3</span> songs every week</b>, delivered instantly</li>
+          <li data-early hidden>New songs before they go public on Spotify and YouTube</li>
+          <li>Full member library</li>
+          <li>Cancel anytime from your account</li>
+        </ul>
+      </div>
+
+      <aside class="card pricebox">
+        <div class="pill red">Membership</div>
+        <p class="price" style="margin:14px 0 4px"><span data-price>$5</span><small> / month</small></p>
+        <p class="muted small" style="margin:0 0 20px">Billed monthly · cancel anytime</p>
+        <button class="btn big" id="buy">Become a member →</button>
+        <div class="msg err" id="msg" role="alert"></div>
+        <p class="muted small center" style="margin:6px 0 0">🔒 Secure checkout by Stripe</p>
+        <hr style="border:0;border-top:1px solid var(--line);margin:22px 0">
+        <div class="center">
+          <span class="muted small">Not ready?</span>
+          <a class="btn ghost" id="free" href="/" style="width:100%;margin-top:10px">Unlock more songs free →</a>
+          <p class="muted small" id="freeHint" style="margin:10px 0 0">Song 1 is already yours. Each friend who joins through your link unlocks another.</p>
+        </div>
+      </aside>
+    </main>
+  </div>
+  </div>
+
+  <script type="module">
+    import { $, api, applyBranding, param, getToken, mountNav } from '/app.js';
+    applyBranding();
+    mountNav(null); // once they've given their email the members' tabs show here too
+
+    // Token from the link, or the one remembered on this browser.
+    const token = getToken();
+    if (token) {
+      $('#free').href = `/unlock?t=${encodeURIComponent(token)}`;
+    } else {
+      // Not signed in on this browser: send them back to enter their email, which brings them back here with their link.
+      $('#free').textContent = 'Already on the list? Get your invite page →';
+      $('#freeHint').hidden = true;
+    }
+
+    const notice = $('#notice');
+    if (param('back')) {
+      notice.hidden = false;
+      notice.textContent = "Welcome back! You're already on the list. Your invite page is one click away.";
+    } else if (param('returning')) {
+      notice.hidden = false;
+      notice.textContent = token
+        ? 'Welcome back!'
+        : 'Welcome back! Check your inbox for your personal link. Already a member? It takes you straight to your songs.';
+    }
+
+    const buy = $('#buy');
+    buy.addEventListener('click', async () => {
+      buy.disabled = true; buy.textContent = 'Opening secure checkout…';
+      $('#msg').textContent = '';
+      try {
+        const { url } = await api('/api/checkout', { method: 'POST', body: { token } });
+        location.href = url;
+      } catch (err) {
+        $('#msg').textContent = err.message;
+        buy.disabled = false; buy.textContent = 'Become a member →';
+      }
+    });
+  </script>
+</body>
+</html>

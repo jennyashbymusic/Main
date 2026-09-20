@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Unsubscribe — {brand}</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="banner-full">
+    <div class="banner-box"><div class="banner-inner"><a class="banner-home" href="/" aria-label="Jenny Ashby home"><img class="banner" src="/img/jenny-ashby-header.jpg" width="1600" height="608" alt="Jenny Ashby — Dark Country, Real Stories"></a></div></div>
+  </header>
+
+  <div class="page-box">
+    <div class="page-body narrow">
+    <main class="center" style="padding:40px 0 80px" id="app">
+      <h1 style="font-size:clamp(28px,5vw,42px)">Leaving so soon?</h1>
+      <p class="lead" style="margin-inline:auto">Confirm below and we'll stop sending you emails.</p>
+      <button class="btn" id="go">Unsubscribe me</button>
+      <div class="msg err" id="msg"></div>
+    </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { $, api, el, applyBranding, param } from '/app.js';
+    applyBranding();
+
+    // A button (not an auto-unsubscribe on page load) so email security scanners that prefetch links can't unsubscribe people.
+    $('#go').addEventListener('click', async () => {
+      try {
+        const { paid } = await api(`/api/unsubscribe?t=${encodeURIComponent(param('t') || '')}`, { method: 'POST' });
+        $('#app').replaceChildren(
+          el('h1', { style: 'font-size:clamp(28px,5vw,42px)' }, "You're unsubscribed"),
+          el('p', { class: 'lead', style: 'margin-inline:auto' }, paid
+            ? 'No more emails. Note: this does not cancel your paid membership.'
+            : "We won't email you again. Sorry to see you go."),
+          paid && el('a', { class: 'btn', href: `/billing?t=${encodeURIComponent(param('t'))}` }, 'Cancel my membership'),
+        );
+      } catch (err) { $('#msg').textContent = err.message; }
+    });
+  </script>
+</body>
+</html>

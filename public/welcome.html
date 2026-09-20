@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Welcome — {brand}</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="banner-full">
+    <div class="banner-box"><div class="banner-inner"><a class="banner-home" href="/" aria-label="Jenny Ashby home"><img class="banner" src="/img/jenny-ashby-header.jpg" width="1600" height="608" alt="Jenny Ashby — Dark Country, Real Stories"></a></div></div>
+  </header>
+
+  <div class="page-box">
+    <div class="page-body narrow">
+    <main class="center" style="padding:40px 0 80px" id="app">
+      <h1 style="font-size:clamp(30px,5vw,46px)">Confirming your <span class="grad">payment…</span></h1>
+      <p class="lead" style="margin-inline:auto">Hang tight, this takes a second.</p>
+    </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { $, api, el, applyBranding, param } from '/app.js';
+    applyBranding();
+
+    const app = $('#app');
+    async function confirm(attempt = 0) {
+      try {
+        const { email, unlockUrl } = await api(`/api/welcome?session_id=${encodeURIComponent(param('session_id') || '')}`);
+        app.replaceChildren(
+          el('h1', { style: 'font-size:clamp(30px,5vw,46px)' }, "You're in! ", el('span', { class: 'grad' }, '🎉')),
+          el('p', { class: 'lead', style: 'margin-inline:auto' }, `Thank you. We've emailed this week's songs to ${email}. You'll get a new drop every week.`),
+          el('a', { class: 'btn', href: unlockUrl }, 'Open my songs →'),
+          el('p', { class: 'muted small', style: 'margin-top:22px' }, 'Manage or cancel your membership anytime from the link in any email.'),
+        );
+      } catch (err) {
+        if (attempt < 4) return setTimeout(() => confirm(attempt + 1), 2000);
+        app.replaceChildren(
+          el('h1', { style: 'font-size:clamp(28px,5vw,42px)' }, 'Almost there'),
+          el('p', { class: 'lead', style: 'margin-inline:auto' }, `${err.message} If you were charged, your membership will activate automatically and a welcome email is on its way.`),
+        );
+      }
+    }
+    confirm();
+  </script>
+</body>
+</html>

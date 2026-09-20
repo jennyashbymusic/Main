@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vote for Spotify — {brand}</title>
+  <meta name="description" content="Vote on which Jenny Ashby songs get added to Spotify next.">
+  <meta property="og:title" content="Vote: which Jenny Ashby songs go on Spotify?">
+  <meta property="og:image" content="%BASE_URL%/img/jenny-ashby-share.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="/img/jenny-avatar.jpg">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="topbar" hidden></div>
+
+  <header class="banner-full">
+    <div class="banner-box"><div class="banner-inner"><a class="banner-home" href="/" aria-label="Jenny Ashby home"><img class="banner" src="/img/jenny-ashby-header.jpg" width="1600" height="608" alt="Jenny Ashby — Dark Country, Real Stories"></a></div></div>
+  </header>
+
+  <div class="page-box">
+
+  <div class="page-body">
+    <main style="padding:34px 0 70px" id="app">
+      <p class="muted">Loading the ballot…</p>
+    </main>
+  </div>
+  </div>
+
+  <aside id="miniPlayer" class="mini-player" aria-label="Now playing" hidden></aside>
+
+  <script type="module">
+    import { $, api, el, applyBranding, getToken, forgetToken, loadConfig, mountNav, memberGate } from '/app.js';
+    import { barPercent, plural, spotifyRule, topBadge } from '/board.js';
+    import { createPlayer } from '/player.js';
+    applyBranding();
+    mountNav('vote', { publicBar: true }); // members see the tabs; visitors see a slim bar and the members gate below
+
+    const token = getToken();
+    const { price } = await loadConfig(); // "$5", the same figure the home and invite pages show
+    const app = $('#app');
+    let state = null;
+    let offset = 0; // server clock minus this device's clock, so the countdown is right even if the device clock is off
+    let reloading = false;
+    let busy = false;
+    let notice = '';
+    let playingId = null; // the song in the "Now playing" box, if any
+
+    // Songs play right here (see /player.js). The box is outside #app, so redraws of the ballot never interrupt it.
+    function markPlaying() {
+      document.querySelectorAll('.cand').forEach((card) => {
+        const on = card.dataset.song === playingId;
+        card.classList.toggle('playing', on);
+        const label = card.querySelector('.linkbtn'); if (label) label.textContent = on ? '▶ Playing' : '▶ Play';
+      });
+    }
+    const player = createPlayer($('#miniPlayer'), { onChange: (song) => { playingId = song ? song.id : null; markPlaying(); } });
+
+    const when = (iso) => new Date(iso).toLocaleString(undefined, { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+
+    // ---- countdown (ticks every second without re-rendering the ballot) ----
+    const box = (id, label) => el('div', { class: 'cd-box' }, el('b', { id }, '--'), el('span', {}, label));
+    function tick() {
+      if (!state?.round) return;
+      const ms = Math.max(0, Date.parse(state.round.endsAt) - (Date.now() + offset));
+      const s = Math.floor(ms / 1000);
+      const set = (id, v) => { const n = $(id); if (n) n.textContent = String(v).padStart(2, '0'); };
+      set('#cdD', Math.floor(s / 86400)); set('#cdH', Math.floor(s / 3600) % 24); set('#cdM', Math.floor(s / 60) % 60); set('#cdS', s % 60);
+      if (ms === 0 && !reloading) { reloading = true; setTimeout(async () => { await load(); reloading = false; }, 1500); } // next round opens
+    }
+    setInterval(tick, 1000);
+
+    // ---- rendering ----
+    function candidate(c, s, maxVotes) {
+      const you = s.you;
+      const lead = c.winning; // inside the top N right now: decided by the server, the same answer the leaderboard shows
+      let action;
+      if (!you) action = null;
+      else if (c.mine) action = el('button', { class: 'btn ghost sm', type: 'button', 'data-id': c.id }, 'Voted ✓ · tap to undo');
+      else action = el('button', { class: 'btn sm', type: 'button', 'data-id': c.id, disabled: you.left === 0 }, you.left === 0 ? 'No votes left' : 'Vote for this');
+
+      const thumb = c.thumb
+        ? el('img', { src: c.thumb, alt: '', loading: 'lazy' })
+        : el('div', { class: 'thumb-empty' }, '♪');
+      return el('article', { class: `cand${c.mine ? ' mine' : ''}${lead ? ' lead' : ''}${playingId === c.id ? ' playing' : ''}`, 'data-song': c.id },
+        el('button', { class: 'cand-thumb', type: 'button', 'data-play': c.id, 'aria-label': `Play ${c.name}` }, thumb,
+          el('span', { class: 'play-badge', 'aria-hidden': 'true' }),
+          lead ? el('span', { class: 'chip' }, topBadge(s)) : null),
+        el('div', { class: 'cand-body' },
+          el('h3', {}, c.name),
+          el('div', { class: 'bar', role: 'presentation' }, el('i', { style: `width:${barPercent(c.votes, maxVotes)}%` })),
+          el('p', { class: 'small muted', style: 'margin:6px 0 12px' }, plural(c.votes, 'vote'), ' · ', el('button', { class: 'linkbtn', type: 'button', 'data-play': c.id }, playingId === c.id ? '▶ Playing' : '▶ Play')),
+          action));
+    }
+
+    function render() {
+      const s = state;
+      app.replaceChildren();
+      if (!s.ready) {
+        app.append(el('h1', {}, 'Voting opens ', el('span', { class: 'grad' }, 'soon')), el('p', { class: 'lead' }, "We're setting up this month's ballot. Check back in a little while."));
+        return;
+      }
+      const maxVotes = Math.max(0, ...s.ballot.map((c) => c.votes));
+
+      app.append(
+        el('p', { class: 'eyebrow' }, `${s.round.label} vote`),
+        el('h1', {}, 'Vote for the songs going on ', el('span', { class: 'grad' }, 'Spotify')),
+        el('p', { class: 'lead' }, `${spotifyRule(s)} Cast your vote below.`),
+
+        el('section', { class: 'card countdown' },
+          el('p', { class: 'eyebrow', style: 'margin-bottom:10px' }, 'Next voting round in'),
+          el('div', { class: 'cd-grid', role: 'timer' }, box('cdD', 'days'), box('cdH', 'hours'), box('cdM', 'mins'), box('cdS', 'secs')),
+          el('p', { class: 'muted small', style: 'margin:14px 0 0' }, `${s.round.label} voting closes ${when(s.round.endsAt)}. A fresh ballot opens right after.`),
+          el('p', { class: 'small', style: 'margin:10px 0 0' }, el('a', { href: '/leaderboard' }, 'See who is winning on the leaderboard →'), ' · ', el('a', { href: '/next-release' }, 'Countdown to Spotify →'))),
+      );
+
+      // who's voting
+      const extra = !s.you.paid && s.memberVotes > s.you.allowed;
+      app.append(el('div', { class: 'card voter-cta' },
+        el('div', {}, el('h3', {}, s.you.left > 0 ? `You have ${plural(s.you.left, 'vote')} left` : "You've used all your votes"),
+          el('p', { class: 'muted small', style: 'margin:0' }, s.you.used
+            ? `${s.you.used} of ${s.you.allowed} used. You can change your votes any time before the round closes.`
+            : `You get ${plural(s.you.allowed, 'vote')} this round.`)),
+        extra ? el('a', { class: 'btn ghost sm', href: `/join?t=${encodeURIComponent(token)}` }, `Members get ${s.memberVotes} votes · ${price}/mo`) : null));
+      if (notice) app.append(el('p', { class: 'msg err', role: 'alert' }, notice));
+
+      app.append(el('h2', { style: 'font-size:24px;margin:26px 0 4px' }, 'Listen and cast your votes'),
+        el('div', { class: 'ballot' }, s.ballot.map((c) => candidate(c, s, maxVotes))));
+
+      if (s.previous) {
+        const pv = s.previous;
+        app.append(el('section', { class: 'card', style: 'margin-top:32px' },
+          el('h2', { style: 'font-size:24px' }, `${pv.label} winners`),
+          pv.winners.length
+            ? el('ol', { class: 'winners' }, pv.winners.map((w) => el('li', {}, el('span', {}, w.name), el('small', { class: 'muted' }, plural(w.votes, 'vote')))))
+            : el('p', { class: 'muted' }, 'No votes were cast that round.'),
+          el('p', { class: 'small', style: 'margin:14px 0 0' },
+            pv.winners.length ? el('span', { class: pv.onSpotify ? 'pill' : 'pill red' }, pv.onSpotify ? 'On Spotify ✓' : 'Heading to Spotify soon') : null,
+            ' ', s.spotifyUrl ? el('a', { href: s.spotifyUrl, target: '_blank', rel: 'noopener' }, 'Open the Spotify playlist ↗') : null)));
+      } else if (s.spotifyUrl) {
+        app.append(el('p', { class: 'small', style: 'margin-top:28px' }, el('a', { href: s.spotifyUrl, target: '_blank', rel: 'noopener' }, 'Open the Spotify playlist ↗')));
+      }
+      tick();
+    }
+
+    // ---- data ----
+    // The vote page is part of the members area: no email (or an unknown one) means the gate, not the ballot.
+    function showGate() {
+      clearInterval(refreshTimer);
+      memberGate(app, {
+        title: ['Join free to ', 'vote'],
+        text: "Voting is part of the members area. Enter your email to get in. It's free, and you get a vote every month.",
+        extra: el('p', { class: 'small', style: 'margin:14px 0 0' }, el('a', { href: '/leaderboard' }, 'Just looking? See the public leaderboard →')),
+        source: 'gate:vote',
+      });
+    }
+
+    async function load() {
+      if (!token) return showGate();
+      try {
+        state = await api(`/api/vote${token ? `?t=${encodeURIComponent(token)}` : ''}`);
+        if (state.ready && !state.you) { forgetToken(); return showGate(); } // an unknown or stale link
+        offset = Date.parse(state.now) - Date.now();
+        render();
+      } catch (err) {
+        app.replaceChildren(el('h1', {}, 'Something ', el('span', { class: 'grad' }, 'went wrong')), el('p', { class: 'lead' }, err.message));
+      }
+    }
+
+    app.addEventListener('click', async (e) => {
+      const playBtn = e.target.closest('[data-play]');
+      if (playBtn) {
+        const song = state?.ballot.find((c) => c.id === playBtn.dataset.play);
+        if (song) player.play({ id: song.id, name: song.name, url: song.url });
+        return;
+      }
+      const btn = e.target.closest('button[data-id]');
+      if (!btn || busy) return;
+      busy = true; btn.disabled = true; notice = '';
+      try {
+        state = await api('/api/vote', { method: 'POST', body: { t: token, videoId: btn.dataset.id } });
+        offset = Date.parse(state.now) - Date.now();
+      } catch (err) {
+        notice = err.message;
+        if (/join the list/i.test(err.message)) forgetToken();
+      }
+      busy = false;
+      render();
+    });
+
+    // Pick up other people's votes without a refresh, but never while someone is mid-tap.
+    const refreshTimer = setInterval(() => { if (!document.hidden && !busy) load(); }, 20000);
+    load();
+  </script>
+</body>
+</html>

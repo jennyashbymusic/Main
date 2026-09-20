@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Next on Spotify — {brand}</title>
+  <meta name="description" content="Countdown to Jenny Ashby's next song on Spotify. The winners of the monthly fan vote are added once the ballot closes.">
+  <meta property="og:title" content="Jenny Ashby — countdown to the next song on Spotify">
+  <meta property="og:description" content="Fans vote all month. When the ballot closes, the winning songs are added to Spotify. Watch the countdown and cast your vote.">
+  <meta property="og:image" content="%BASE_URL%/img/jenny-ashby-share.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="/img/jenny-avatar.jpg">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="topbar" hidden></div>
+
+  <header class="banner-full">
+    <div class="banner-box"><div class="banner-inner"><a class="banner-home" href="/" aria-label="Jenny Ashby home"><img class="banner" src="/img/jenny-ashby-header.jpg" width="1600" height="608" alt="Jenny Ashby — Dark Country, Real Stories"></a></div></div>
+  </header>
+
+  <div class="page-box">
+
+  <div class="page-body">
+    <main style="padding:34px 0 70px" id="app">
+      <p class="muted">Loading the countdown…</p>
+    </main>
+  </div>
+  </div>
+
+  <script type="module">
+    import { $, api, el, applyBranding, getToken, mountNav, shareRow } from '/app.js';
+    import { plural, spotifyRule } from '/board.js';
+    applyBranding();
+    mountNav('release', { publicBar: true }); // public page: visitors get a slim bar with "Join free", members get the tabs
+
+    const token = getToken();
+    const app = $('#app');
+    let state = null;
+    let listenUrl = null; // where "Listen on Spotify" goes: the vote playlist if you set one, else Jenny's Spotify page
+    let offset = 0; // server clock minus this device's clock, so the countdown is right even if the device clock is off
+    let reloading = false;
+    let share = null; // built once, so a refresh doesn't wipe "Copied ✓"
+
+    const when = (iso) => new Date(iso).toLocaleString(undefined, { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+
+    // ---- countdown to the moment the ballot closes (ticks every second without re-drawing the page) ----
+    const box = (id, label) => el('div', { class: 'cd-box' }, el('b', { id }, '--'), el('span', {}, label));
+    function tick() {
+      if (!state?.round) return;
+      const ms = Math.max(0, Date.parse(state.round.endsAt) - (Date.now() + offset));
+      const s = Math.floor(ms / 1000);
+      const set = (id, v) => { const n = $(id); if (n) n.textContent = String(v).padStart(2, '0'); };
+      set('#cdD', Math.floor(s / 86400)); set('#cdH', Math.floor(s / 3600) % 24); set('#cdM', Math.floor(s / 60) % 60); set('#cdS', s % 60);
+      // the ballot has just closed: fetch the new state (the winners, and next month's countdown)
+      if (ms === 0 && !reloading) { reloading = true; setTimeout(async () => { await load(); reloading = false; }, 1500); }
+    }
+    setInterval(tick, 1000);
+
+    const winnerList = (winners) => el('ol', { class: 'winners' },
+      winners.map((w) => el('li', {}, el('span', {}, w.name), el('small', { class: 'muted' }, plural(w.votes, 'vote')))));
+
+    function render() {
+      const s = state;
+      app.replaceChildren();
+      if (!s.ready) {
+        app.append(el('h1', {}, 'Countdown ', el('span', { class: 'grad' }, 'opening soon')),
+          el('p', { class: 'lead' }, "We're setting up this month's ballot. Check back in a little while."));
+        return;
+      }
+      const n = s.winnersPerMonth;
+      const pv = s.previous;
+      const pending = pv && pv.winners.length > 0 && !pv.onSpotify; // last ballot has closed, its winners aren't on Spotify yet
+
+      app.append(
+        el('p', { class: 'eyebrow' }, 'Next on Spotify'),
+        el('h1', {}, 'Counting down to the next ', el('span', { class: 'grad' }, 'Spotify'), ' release'),
+        el('p', { class: 'lead' }, `${spotifyRule(s)} The countdown is to the moment this month's ballot closes.`));
+
+      // The last ballot has closed but its songs aren't on Spotify yet: that is the "next release" right now.
+      if (pending) {
+        app.append(el('section', { class: 'card', style: 'margin:0 0 16px;border-color:rgba(226,180,95,.6)' },
+          el('p', { class: 'eyebrow', style: 'margin-bottom:8px' }, `${pv.label} ballot closed`),
+          el('h2', { style: 'font-size:24px;margin:0' }, plural(pv.winners.length, 'song') + (pv.winners.length === 1 ? ' is' : ' are') + ' heading to Spotify'),
+          winnerList(pv.winners),
+          el('p', { class: 'small', style: 'margin:12px 0 0' }, el('span', { class: 'pill red' }, 'Heading to Spotify soon'))));
+      }
+
+      app.append(el('section', { class: 'card countdown', 'aria-label': 'Countdown' },
+        el('p', { class: 'eyebrow', style: 'margin-bottom:10px' }, pending ? 'Next ballot closes in' : 'Ballot closes in'),
+        el('div', { class: 'cd-grid', role: 'timer' }, box('cdD', 'days'), box('cdH', 'hours'), box('cdM', 'mins'), box('cdS', 'secs')),
+        el('p', { class: 'muted small', style: 'margin:14px 0 0' },
+          `${s.round.label} voting closes ${when(s.round.endsAt)}. The top ${n} ${n === 1 ? 'song goes' : 'songs go'} on Spotify once the ballot closes.`)));
+
+      // who would go on Spotify if voting closed right now
+      const leaders = s.leaderboard.filter((r) => r.winning);
+      const open = Math.max(0, n - leaders.length);
+      app.append(el('section', { class: 'card', style: 'margin:0 0 16px' },
+        el('div', { class: 'board-head' }, el('h2', {}, 'In the lead right now'), el('span', { class: 'live' }, 'Live')),
+        el('p', { class: 'small muted', style: 'margin:0 0 8px' },
+          s.totals.votes ? `${plural(s.totals.votes, 'vote')} from ${plural(s.totals.voters, 'fan')}. If voting closed now, these would go on Spotify.` : 'No votes yet. The songs in the lead will show up here.'),
+        leaders.length ? el('ol', { class: 'board-list' }, leaders.map((r) =>
+          el('li', { class: 'board-row win' },
+            el('span', { class: `pos${r.position <= 3 ? ` p${r.position}` : ''}` }, String(r.position)),
+            el('span', { class: 'bthumb', 'aria-hidden': 'true' }, r.thumb ? el('img', { src: r.thumb, alt: '', loading: 'lazy' }) : null),
+            el('div', { class: 'bname' }, r.name),
+            el('div', { class: 'votecount' }, String(r.votes), el('small', {}, r.votes === 1 ? 'vote' : 'votes'))))) : null,
+        open && leaders.length ? el('p', { class: 'small muted', style: 'margin:10px 0 0' }, `${open} of the top ${n} spots still open.`) : null,
+        el('p', { class: 'small', style: 'margin:12px 0 0' }, el('a', { href: '/leaderboard' }, 'See the full leaderboard →'))));
+
+      // call to action
+      app.append(el('div', { class: 'row', style: 'gap:12px;margin:0 0 8px' },
+        token ? el('a', { class: 'btn', href: '/vote' }, 'Cast your vote →') : el('a', { class: 'btn', href: '/' }, 'Join free to vote →'),
+        listenUrl ? el('a', { class: 'btn ghost', href: listenUrl, target: '_blank', rel: 'noopener' }, 'Listen on Spotify ↗') : null));
+
+      // send it to a friend (built once)
+      share ??= el('div', { class: 'board-share' },
+        el('h3', {}, 'Tell a friend'),
+        el('p', { class: 'small muted', style: 'margin:0' }, 'Share the countdown with anyone who loves Jenny\'s songs.'),
+        shareRow(`${s.origin || location.origin}/next-release`, {
+          text: "Jenny Ashby's next song heads to Spotify when voting closes. Watch the countdown and cast your vote:",
+          subject: 'Countdown: the next Jenny Ashby song on Spotify',
+          title: 'Next on Spotify',
+          inputLabel: 'Link to the countdown',
+        }));
+      app.append(share);
+
+      // the last ballot, once its songs are on Spotify
+      if (pv && !pending) {
+        app.append(el('section', { class: 'card', style: 'margin-top:24px' },
+          el('h2', { style: 'font-size:24px' }, `${pv.label} winners`),
+          pv.winners.length ? winnerList(pv.winners) : el('p', { class: 'muted' }, 'No votes were cast that round.'),
+          pv.winners.length ? el('p', { class: 'small', style: 'margin:14px 0 0' }, el('span', { class: 'pill' }, 'On Spotify ✓')) : null));
+      }
+      tick();
+    }
+
+    async function load() {
+      try {
+        state = await api('/api/vote');
+        offset = Date.parse(state.now) - Date.now();
+        render();
+      } catch (err) {
+        app.replaceChildren(el('h1', {}, 'Something ', el('span', { class: 'grad' }, 'went wrong')), el('p', { class: 'lead' }, err.message));
+      }
+    }
+    (async () => {
+      try { listenUrl = (await api('/api/links')).links.find((l) => l.id === 'spotify')?.url || null; } catch { /* the button just isn't shown */ }
+      await load();
+      // the vote playlist, if the owner set one, is a better place to send people than the artist page
+      if (state?.spotifyUrl) { listenUrl = state.spotifyUrl; render(); }
+    })();
+    setInterval(() => { if (!document.hidden) load(); }, 15000); // standings and the closed-ballot notice refresh on their own
+  </script>
+</body>
+</html>

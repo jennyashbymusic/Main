@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jenny Ashby — Listen &amp; Links</title>
+  <meta name="description" content="Listen to Jenny Ashby on Spotify, YouTube Music and Amazon Music, or order a custom chorus.">
+  <meta property="og:title" content="Jenny Ashby — Dark Country • Real Stories">
+  <meta property="og:description" content="Listen on Spotify, YouTube Music and Amazon Music, or order a custom chorus.">
+  <meta property="og:image" content="%BASE_URL%/img/jenny-ashby-share.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="/img/jenny-avatar.jpg">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="banner-full">
+    <div class="banner-box"><div class="banner-inner"><img class="banner" src="/img/jenny-ashby-header.jpg" width="1600" height="608" alt="Jenny Ashby — Dark Country, Real Stories"></div></div>
+  </header>
+
+  <div class="page-box">
+  <main class="linkpage">
+
+    <a class="link-chorus" id="chorus" href="/chorus" hidden>
+      <span class="link-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#1c1006" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/><path d="M6.5 11a5.5 5.5 0 0 0 11 0M12 16.5V20"/></svg>
+      </span>
+      <span class="link-text"><b>Custom Chorus</b><small>Your story, your name, your chorus</small></span>
+      <span class="link-price" id="chorusPrice"></span>
+    </a>
+
+    <nav class="link-list" id="links" aria-label="Links"></nav>
+
+    <a class="link-join" href="/">Get a free Jenny song every week →</a>
+    <p class="link-foot">© <span id="year"></span> <span data-brand>Jenny Ashby</span></p>
+  </main>
+  </div>
+
+  <script type="module">
+    import { $, api, el, applyBranding, money } from '/app.js';
+    applyBranding();
+    $('#year').textContent = new Date().getFullYear();
+
+    // Simple mark for each service (drawn here, not the trademarked logos). Constant markup, no user data.
+    const ICONS = {
+      spotify: '<svg viewBox="0 0 24 24" width="30" height="30"><circle cx="12" cy="12" r="11" fill="#1DB954"/><g fill="none" stroke="#0c0906" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 9.2c3.8-1.2 8-.9 11.3 1"/><path d="M7.1 12.5c3.1-.9 6.4-.6 9.1.9"/><path d="M8 15.5c2.5-.6 4.9-.4 6.9.7"/></g></svg>',
+      'youtube-music': '<svg viewBox="0 0 24 24" width="30" height="30"><circle cx="12" cy="12" r="11" fill="#FF0000"/><circle cx="12" cy="12" r="6.2" fill="none" stroke="#fff" stroke-width="1.4"/><path d="M10.3 9.1v5.8l4.9-2.9z" fill="#fff"/></svg>',
+      'amazon-music': '<svg viewBox="0 0 24 24" width="30" height="30"><circle cx="12" cy="12" r="11" fill="#25D1DA"/><g fill="none" stroke="#06232a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10.2 14.6V6.4l5.2-1.3v8"/><circle cx="8.8" cy="14.8" r="1.5" fill="#06232a"/><circle cx="14" cy="13.4" r="1.5" fill="#06232a"/><path d="M6.6 18.2c3.2 1.9 7.6 1.9 10.8 0"/></g></svg>',
+    };
+
+    function streamingLink(l) {
+      const icon = el('span', { class: 'link-icon', 'aria-hidden': 'true' });
+      icon.innerHTML = ICONS[l.id] || '';
+      return el('a', { class: 'link-btn', href: l.url, target: '_blank', rel: 'noopener' },
+        icon, el('span', { class: 'link-text' }, el('b', {}, l.label), el('small', {}, l.note)), el('span', { class: 'link-arrow', 'aria-hidden': 'true' }, '↗'));
+    }
+
+    (async () => {
+      try {
+        const d = await api('/api/links');
+        $('#links').replaceChildren(...d.links.map(streamingLink));
+        if (d.chorus) {
+          $('#chorusPrice').textContent = money(d.chorus.priceCents, d.chorus.currency);
+          $('#chorus').hidden = false;
+        }
+      } catch {
+        $('#links').replaceChildren(el('p', { class: 'muted small center' }, "Links couldn't load. Please refresh."));
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tip Jar — {brand}</title>
+  <meta name="description" content="Love Jenny Ashby's songs? Leave a tip to say thanks and help keep the music coming.">
+  <meta property="og:title" content="Jenny Ashby — Tip Jar">
+  <meta property="og:description" content="Love the songs? Leave Jenny a tip to say thanks and help keep the music coming.">
+  <meta property="og:image" content="%BASE_URL%/img/jenny-ashby-share.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="/img/jenny-avatar.jpg">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="topbar" hidden></div>
+
+  <header class="banner-full">
+    <div class="banner-box"><div class="banner-inner"><a class="banner-home" href="/" aria-label="Jenny Ashby home"><img class="banner" src="/img/jenny-ashby-header.jpg" width="1600" height="608" alt="Jenny Ashby — Dark Country, Real Stories"></a></div></div>
+  </header>
+
+  <div class="page-box">
+    <div class="page-body narrow">
+      <main style="padding:14px 0 70px" id="app">
+        <p class="muted">Loading…</p>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { $, api, el, applyBranding, mountNav, param, money } from '/app.js';
+    applyBranding();
+    mountNav('tipjar', { publicBar: true }); // members see the tabs; visitors get a slim bar with "Join free"
+
+    const app = $('#app');
+    let opts = null; // quick-pick amounts and the smallest / biggest tip, from /api/tips/options
+
+    // ---- after paying: Stripe sends the tipper back here with ?session_id= ----
+    async function confirmTip(sessionId, attempt = 0) {
+      try {
+        const r = await api(`/api/tips/thanks?session_id=${encodeURIComponent(sessionId)}`);
+        history.replaceState(null, '', '/tip-jar');
+        app.replaceChildren(
+          el('p', { class: 'eyebrow' }, 'Tip received'),
+          el('h1', {}, 'Thank you', r.name ? `, ${r.name}` : '', ' ', el('span', { class: 'grad' }, '💛')),
+          el('p', { class: 'lead' }, `Your ${money(r.amountCents, r.currency)} tip means a lot to Jenny.${r.email ? ` A thank-you note is on its way to ${r.email}.` : ''}`),
+          el('div', { class: 'row', style: 'gap:12px' },
+            el('a', { class: 'btn', href: '/' }, 'Back to the main site'),
+            el('a', { class: 'btn ghost', href: '/vote' }, 'Vote for the next song')));
+      } catch (err) {
+        if (attempt < 4) { await new Promise((r) => setTimeout(r, 2000)); return confirmTip(sessionId, attempt + 1); }
+        app.replaceChildren(
+          el('h1', {}, 'Almost ', el('span', { class: 'grad' }, 'there')),
+          el('p', { class: 'lead' }, `${err.message} If you were charged, your tip is safe and a confirmation email is on its way.`));
+      }
+    }
+
+    // "7", "7.5", "$7.50" -> 750. Anything else -> null.
+    function dollarsToCents(text) {
+      const t = String(text).replace(/[\s$,]/g, '');
+      return /^\d{1,6}(\.\d{1,2})?$/.test(t) ? Math.round(parseFloat(t) * 100) : null;
+    }
+
+    const field = (label, control, hint) => {
+      control.id = 'f-' + control.name;
+      const lab = el('label', {}, label, hint ? el('span', { class: 'hint' }, ` ${hint}`) : null);
+      lab.htmlFor = control.id;
+      return el('div', { class: 'field' }, lab, control);
+    };
+
+    function renderForm() {
+      const { currency, presetsCents, minCents, maxCents } = opts;
+      let preset = presetsCents.length ? presetsCents[Math.min(1, presetsCents.length - 1)] : null; // start on the second amount ($5)
+      let custom = null; // cents typed into "Other", if valid
+
+      const amountBtns = presetsCents.map((c) => {
+        const b = el('button', { class: 'tip-amt', type: 'button', role: 'radio', 'aria-checked': 'false', 'data-cents': String(c) }, money(c, currency));
+        b.addEventListener('click', () => { preset = c; custom = null; other.value = ''; refresh(); });
+        return b;
+      });
+      const other = el('input', { name: 'other', type: 'text', inputmode: 'decimal', autocomplete: 'off', placeholder: 'Other amount', 'aria-label': 'Other amount in dollars', maxlength: '10' });
+      other.addEventListener('input', () => {
+        custom = dollarsToCents(other.value);
+        if (other.value.trim()) preset = null; else if (preset == null && presetsCents.length) preset = presetsCents[0];
+        refresh();
+      });
+      const otherBox = el('div', { class: 'tip-other' }, el('span', { 'aria-hidden': 'true' }, '$'), other);
+
+      const name = el('input', { name: 'name', type: 'text', maxlength: '80', autocomplete: 'given-name', placeholder: 'So Jenny knows who to thank' });
+      const message = el('textarea', { name: 'message', maxlength: '300', placeholder: 'A note for Jenny, a song you love, anything you like.', style: 'min-height:100px' });
+      const counter = el('div', { class: 'counter' }, '0 / 300');
+      message.addEventListener('input', () => { counter.textContent = `${message.value.length} / 300`; });
+      const msg = el('div', { class: 'msg', role: 'alert' });
+      const button = el('button', { class: 'btn big', type: 'submit' }, 'Leave a tip →');
+
+      const amount = () => (other.value.trim() ? custom : preset); // cents, or null if what is typed isn't a valid amount
+      function refresh() {
+        amountBtns.forEach((b) => b.setAttribute('aria-checked', String(!other.value.trim() && Number(b.dataset.cents) === preset)));
+        otherBox.classList.toggle('on', Boolean(other.value.trim()));
+        if (!opts.ready) return; // payments are not switched on: the button keeps saying so
+        const c = amount();
+        button.textContent = c != null && c >= minCents && c <= maxCents ? `Leave a ${money(c, currency)} tip →` : 'Leave a tip →';
+      }
+
+      const form = el('form', { novalidate: true },
+        el('div', { class: 'field' },
+          el('label', { id: 'amountLabel' }, 'Choose an amount'),
+          el('div', { class: 'tip-amounts', role: 'radiogroup', 'aria-labelledby': 'amountLabel' }, ...amountBtns, otherBox)),
+        field('Your name', name, '(optional)'),
+        field('A note for Jenny', message, '(optional)'), counter,
+        button, msg,
+        el('p', { class: 'muted small center', style: 'margin:10px 0 0' }, '🔒 Secure checkout by Stripe. A one-time tip, no subscription.'));
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        msg.textContent = ''; msg.className = 'msg';
+        const c = amount();
+        if (c == null) { msg.textContent = 'Please choose an amount, or type one like 7 or 7.50.'; msg.className = 'msg err'; other.focus(); return; }
+        if (c < minCents) { msg.textContent = `The smallest tip is ${money(minCents, currency)}.`; msg.className = 'msg err'; return; }
+        if (c > maxCents) { msg.textContent = `The biggest tip we can take here is ${money(maxCents, currency)}. Thank you!`; msg.className = 'msg err'; return; }
+        button.disabled = true; button.textContent = 'Opening secure checkout…';
+        try {
+          const { url } = await api('/api/tips/checkout', { method: 'POST', body: { amountCents: c, name: name.value, message: message.value } });
+          location.href = url;
+        } catch (err) {
+          msg.textContent = err.message; msg.className = 'msg err';
+          button.disabled = false; refresh();
+        }
+      });
+      // Stripe isn't connected yet (no STRIPE_SECRET_KEY): say so up front instead of after someone fills the form in.
+      if (!opts.ready) {
+        button.disabled = true; button.textContent = 'Tips open soon';
+        msg.textContent = 'The tip jar is not switched on yet. Please check back soon.'; msg.className = 'msg';
+      }
+      refresh();
+
+      app.replaceChildren(
+        el('p', { class: 'eyebrow' }, 'Tip jar'),
+        el('h1', { style: 'font-size:clamp(30px,6vw,46px)' }, 'Leave Jenny a ', el('span', { class: 'grad' }, 'tip')),
+        el('p', { class: 'lead', style: 'margin-bottom:8px' }, 'Love the songs? A tip is a simple way to say thanks and help keep the music coming. Every one is appreciated.'),
+        el('div', { class: 'card', style: 'margin-top:20px' }, form),
+        el('p', { class: 'muted small', style: 'margin:16px 0 0' }, 'A tip is a gift to support Jenny\'s music. It isn\'t a purchase and isn\'t tax-deductible. See the ', el('a', { href: '/terms' }, 'Terms'), '.'),
+        el('p', { class: 'pagefoot' }, el('a', { href: '/' }, '← Back to the main site')));
+    }
+
+    async function start() {
+      const sessionId = param('session_id');
+      if (sessionId) {
+        app.replaceChildren(el('h1', {}, 'Confirming your ', el('span', { class: 'grad' }, 'tip…')));
+        return confirmTip(sessionId);
+      }
+      try {
+        opts = await api('/api/tips/options');
+        renderForm();
+      } catch (err) {
+        app.replaceChildren(el('h1', {}, 'Something ', el('span', { class: 'grad' }, 'went wrong')), el('p', { class: 'lead' }, err.message));
+      }
+    }
+    start();
+  </script>
+</body>
+</html>

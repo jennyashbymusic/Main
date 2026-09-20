@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jenny Ashby — Dark Country, Real Stories · A free Jenny song, every week</title>
+  <meta name="description" content="Dark country, real stories. Join the list for a free Jenny Ashby song every week, and invite friends to unlock more.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Jenny Ashby">
+  <meta property="og:title" content="Jenny Ashby — A free Jenny song, every week">
+  <meta property="og:description" content="Dark country, real stories. Join the list, get a free song every week, and invite friends to unlock more.">
+  <meta property="og:image" content="%BASE_URL%/img/jenny-ashby-share.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="%BASE_URL%/img/jenny-ashby-share.jpg">
+  <link rel="icon" href="/img/jenny-avatar.jpg">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="topbar" hidden></div>
+
+  <header class="banner-full">
+    <div class="banner-box"><div class="banner-inner"><img class="banner" src="/img/jenny-ashby-header.jpg" width="1600" height="608" alt="Jenny Ashby — Dark Country, Real Stories"></div></div>
+  </header>
+
+  <div class="page-box">
+
+  <div class="page-body">
+    <main>
+      <!-- ============ TOP OF THE PAGE: the video and the signup form (unchanged) ============ -->
+      <section class="hero">
+        <div class="video-col">
+          <div class="video" id="video">
+            <div class="video-empty" id="videoEmpty">
+              <img src="/img/jenny-video-poster.jpg" alt="" width="960" height="540">
+              <span class="video-soon">Video coming soon</span>
+            </div>
+          </div>
+          <p class="video-caption small muted" id="videoCaption" hidden></p>
+        </div>
+
+        <div class="copy">
+          <h1>A free Jenny song,<br><span class="grad">every week.</span></h1>
+          <p class="lead">Join the list. Invite friends to unlock more.</p>
+
+          <form class="signup" id="signup" novalidate>
+            <input type="email" name="email" placeholder="you@email.com" autocomplete="email" required aria-label="Email address">
+            <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <button class="btn" type="submit">Get my free song →</button>
+          </form>
+          <div class="msg" id="msg" role="status"></div>
+          <p class="muted small" data-consent>By joining, you agree to get occasional emails about new songs and offers. Unsubscribe anytime.</p>
+        </div>
+      </section>
+
+      <!-- ============ HOW IT WORKS ============ -->
+      <section id="how">
+        <h2>How it works</h2>
+        <div class="grid3" style="margin-top:20px">
+          <div class="card"><div class="step-num">1</div><h3>Join the list</h3><p class="muted">Get this week's first song.</p></div>
+          <div class="card"><div class="step-num">2</div><h3>Invite friends</h3><p class="muted">Each friend who joins through your link unlocks another song, up to <span data-songs>3</span> a week.</p></div>
+          <div class="card"><div class="step-num">3</div><h3>Or become a member</h3><p class="muted"><span data-price>$5</span>/mo for all <span data-songs>3</span> instantly<span data-early hidden>, plus songs before they go public</span>.</p></div>
+        </div>
+      </section>
+
+      <!-- ============ LATEST SONGS (press play, they stay on the site) ============ -->
+      <section class="home-sec" id="songs" aria-labelledby="songsTitle">
+        <h2 id="songsTitle">Latest songs</h2>
+        <p class="sec-sub">Press play and listen right here. No need to leave the page.</p>
+        <div class="ballot" id="latest"><p class="muted">Loading the latest songs…</p></div>
+      </section>
+
+      <!-- ============ NEXT ON SPOTIFY: live countdown + who is leading ============ -->
+      <section class="home-sec" id="vote" aria-labelledby="voteTitle">
+        <h2 id="voteTitle">Help pick the next song on Spotify</h2>
+        <p class="sec-sub">Every month, fans vote and the top <span data-winners>3 songs</span> are added to Jenny's Spotify once the ballot closes. Joining is free and gets you <span data-votes-free>1 vote</span> a month.</p>
+        <div class="card countdown" id="voteTeaser" style="margin:0"><p class="muted">Loading the countdown…</p></div>
+      </section>
+
+      <!-- ============ ABOUT ME ============ -->
+      <!-- DRAFT COPY: this is placeholder wording. Replace it with Jenny's own story (where she is from, what got her writing,
+           who she listens to, what she wants fans to feel). Only the paragraphs inside .about-text need to change. -->
+      <section class="home-sec" id="about" aria-labelledby="aboutTitle">
+        <div class="about">
+          <div class="about-photo"><img src="/img/jenny-ashby-header.jpg" alt="Jenny Ashby with her guitar" width="1600" height="608" loading="lazy"></div>
+          <div class="about-text">
+            <p class="eyebrow">About me</p>
+            <h2 id="aboutTitle">Hi, I'm <span class="grad">Jenny Ashby</span></h2>
+            <p>I write dark country: songs about the things people feel but don't always say out loud. Heartbreak, hard lessons, second chances, and the real stories behind them. I don't sand off the rough edges, because that's where the truth is.</p>
+            <p>This is my home for it. Join free and I'll send you a song every week. Bring your friends to unlock more, vote each month on which songs go on Spotify, or send me your own story and I'll turn it into a chorus written just for you.</p>
+            <p>Thank you for listening. It really does mean everything.</p>
+            <div class="about-links" id="aboutLinks"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ MORE FROM JENNY ============ -->
+      <section class="home-sec" id="more" aria-labelledby="moreTitle">
+        <h2 id="moreTitle">More from Jenny</h2>
+        <div class="more-grid" style="margin-top:20px">
+          <div class="card more-card">
+            <p class="eyebrow" style="margin:0">Music store</p>
+            <h3>Own the songs</h3>
+            <p>Songs are <span data-song-price>$2</span> and full albums are <span data-album-price>$12</span>. Yours to keep, downloaded straight from here.</p>
+            <a class="btn ghost" href="/store">Browse the store →</a>
+          </div>
+          <div class="card more-card" style="border-color:rgba(226,180,95,.45);background:linear-gradient(120deg,rgba(226,180,95,.10),rgba(26,19,14,.92))">
+            <p class="eyebrow" style="margin:0">Custom Chorus</p>
+            <h3>A chorus written just for you</h3>
+            <p>Tell Jenny your story and get your own chorus: <span data-chorus-price>$10</span><span data-chorus-when></span>.</p>
+            <a class="btn" href="/chorus">Order a custom chorus →</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ FAQ ============ -->
+      <section class="home-sec" id="faq" aria-labelledby="faqTitle">
+        <h2 id="faqTitle">Questions, answered</h2>
+        <div class="faq" style="margin-top:20px">
+          <details>
+            <summary>Is it really free?</summary>
+            <div class="answer">Yes. Joining is free and gets you this week's first song. You can unlock the rest by inviting friends, or become a member for <span data-price>$5</span>/mo to get everything at once.</div>
+          </details>
+          <details>
+            <summary>How do I unlock more songs?</summary>
+            <div class="answer">Share your personal invite link. When a friend joins through it and confirms their email, you unlock another song: one friend for song 2, two friends for song 3. You can find your link on your Invite page.</div>
+          </details>
+          <details>
+            <summary>What do I get as a member?</summary>
+            <div class="answer">For <span data-price>$5</span>/mo you get all <span data-songs>3</span> songs every week straight away, and <span data-votes-member>3 votes</span> each month instead of <span data-votes-free>1 vote</span>.<span data-early hidden> You also hear new songs before they go public on Spotify and YouTube.</span> There's no contract: you can cancel any time.</div>
+          </details>
+          <details>
+            <summary>How do I cancel?</summary>
+            <div class="answer">Any time. Open your Invite page and choose "Manage subscription". It opens a secure billing page where you can cancel, and you won't be charged again.</div>
+          </details>
+          <details>
+            <summary>When and how do the songs arrive?</summary>
+            <div class="answer">By email, once a week. Your first song arrives the moment you join, and you can open your songs any time from your personal Invite page. If you don't see an email, check your spam or promotions folder, or enter your email at the top of this page again and we'll send it again.</div>
+          </details>
+          <details>
+            <summary>How does the monthly Spotify vote work?</summary>
+            <div class="answer">Each month there's a new ballot of Jenny's songs. Everyone who joins gets <span data-votes-free>1 vote</span>, members get <span data-votes-member>3 votes</span>, and you can change your votes until the ballot closes. When it closes, the top <span data-winners>3 songs</span> are added to Jenny's Spotify. Follow the <a href="/leaderboard">live leaderboard</a> and the <a href="/next-release">countdown to the next release</a>.</div>
+          </details>
+          <details>
+            <summary>What is a Custom Chorus?</summary>
+            <div class="answer">You tell Jenny your story (a person, a memory, a moment) and she writes a chorus just for you, for <span data-chorus-price>$10</span><span data-chorus-when></span>. It makes a great gift. See the details and terms on the <a href="/chorus">Custom Chorus page</a>.</div>
+          </details>
+          <details>
+            <summary>Can I buy songs and albums?</summary>
+            <div class="answer">Yes. Songs are <span data-song-price>$2</span> and albums are <span data-album-price>$12</span> in the <a href="/store">store</a>. After you pay you get private download links that you can use up to <span data-download-limit>10</span> times each.</div>
+          </details>
+          <details>
+            <summary>Can I just leave Jenny a tip?</summary>
+            <div class="answer">Yes, and thank you! The <a href="/tip-jar">Tip Jar</a> takes a one-time tip of any amount you like through Stripe. A tip is a gift to support the music: it isn't a purchase and isn't tax-deductible.</div>
+          </details>
+          <details>
+            <summary>Will you fill my inbox? Can I unsubscribe?</summary>
+            <div class="answer">You'll only get occasional emails about new songs and offers, and every email has an unsubscribe link that works straight away. We don't sell your email address. See the <a href="/privacy">Privacy page</a> for the details.</div>
+          </details>
+          <details>
+            <summary>Is paying safe?</summary>
+            <div class="answer">Payments are handled by Stripe, one of the biggest payment companies in the world. Your card details go to Stripe and never touch this site.</div>
+          </details>
+        </div>
+      </section>
+
+      <!-- ============ FINAL CALL TO ACTION ============ -->
+      <section class="home-sec" aria-labelledby="joinTitle">
+        <div class="card final-cta">
+          <h2 id="joinTitle">Ready for your <span class="grad">free song?</span></h2>
+          <p class="sec-sub" style="margin-inline:auto">Join the list and this week's first song is on its way to you in seconds.</p>
+          <form class="signup" id="signup2" novalidate>
+            <input type="email" name="email" placeholder="you@email.com" autocomplete="email" required aria-label="Email address">
+            <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <button class="btn" type="submit">Get my free song →</button>
+          </form>
+          <div class="msg" id="msg2" role="status"></div>
+          <p class="muted small" data-consent>By joining, you agree to get occasional emails about new songs and offers. Unsubscribe anytime.</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- ============ FOOTER ============ -->
+    <footer class="site-footer">
+      <div class="footer-grid">
+        <div>
+          <a class="brand" href="/" aria-label="Home"><img class="avatar" src="/img/jenny-avatar.jpg" alt=""><span class="brand-text"><span data-brand>Jenny Ashby</span><small>Dark Country • Real Stories</small></span></a>
+          <p class="muted small" style="margin:14px 0 0;max-width:280px">A free song every week, a monthly vote on what hits Spotify, and music made for you.</p>
+        </div>
+        <nav aria-label="Explore">
+          <h4>Explore</h4>
+          <a href="#songs">Latest songs</a>
+          <a href="/leaderboard">Leaderboard</a>
+          <a href="/next-release">Next Release</a>
+          <a href="/store">Music store</a>
+          <a href="/chorus">Custom Chorus</a>
+          <a href="/tip-jar">Tip Jar</a>
+          <a href="#about">About me</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+        <nav aria-label="Listen and follow">
+          <h4>Listen</h4>
+          <span id="footerLinks"></span>
+        </nav>
+      </div>
+      <div class="footer-bottom">
+        <span>© <span id="year"></span> <span data-brand>Jenny Ashby</span> · Dark Country • Real Stories</span>
+        <span class="footer-legal"><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a data-contact-link="Contact" href="#" hidden>Contact</a></span>
+      </div>
+    </footer>
+  </div>
+  </div>
+
+  <aside id="miniPlayer" class="mini-player" aria-label="Now playing" hidden></aside>
+
+  <script type="module">
+    import { $, api, el, applyBranding, param, mountNav, signup } from '/app.js';
+    import { createPlayer } from '/player.js';
+    const cfgPromise = applyBranding();
+    mountNav('home'); // the members' tabs appear here only for people who have already given their email
+    $('#year').textContent = new Date().getFullYear();
+
+    // Remember who referred this visitor (the ?ref= code in a friend's share link).
+    try { if (param('ref')) localStorage.setItem('lm_ref', param('ref')); } catch {}
+
+    // Both signup forms (the one at the top and the one at the bottom) do the same thing.
+    function wireSignup(form, msg, source) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = form.querySelector('button');
+        msg.textContent = ''; msg.className = 'msg';
+        btn.disabled = true; btn.textContent = 'One sec…';
+        try {
+          await signup(form.email.value, form.website.value, source); // remembers them here, then sends them to the sales page
+        } catch (err) {
+          msg.textContent = err.message; msg.className = 'msg err';
+          btn.disabled = false; btn.textContent = 'Get my free song →';
+        }
+      });
+    }
+    wireSignup($('#signup'), $('#msg'), 'landing');
+    wireSignup($('#signup2'), $('#msg2'), 'landing:bottom');
+
+    // ---- Video on the left: a poster that loads the YouTube player only when clicked (fast page, no tracking until play) ----
+    const heroVideo = { v: null };
+    function showPoster() {
+      const v = heroVideo.v;
+      const img = el('img', { src: v.thumb || `https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/hqdefault.jpg`, alt: '' });
+      const play = el('button', { class: 'video-play', type: 'button', 'aria-label': v.title ? `Play: ${v.title}` : 'Play video' },
+        img, el('span', { class: 'play-icon', 'aria-hidden': 'true' }));
+      play.addEventListener('click', () => {
+        player.stop(); // one thing playing at a time
+        $('#video').replaceChildren(el('iframe', {
+          src: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.id)}?autoplay=1&rel=0`,
+          title: v.title || 'Jenny Ashby video', allowfullscreen: true,
+          referrerpolicy: 'strict-origin-when-cross-origin',
+          allow: 'autoplay; encrypted-media; picture-in-picture; fullscreen',
+        }));
+      });
+      $('#video').replaceChildren(play);
+    }
+    (async () => {
+      try {
+        const v = await api('/api/featured');
+        if (!v.id) return; // keep the "coming soon" placeholder
+        heroVideo.v = v;
+        showPoster();
+        if (v.title) { const c = $('#videoCaption'); c.textContent = v.title; c.hidden = false; }
+      } catch { /* placeholder stays */ }
+    })();
+
+    // ---- Latest songs: play in the "Now playing" box (same player as the vote page) ----
+    let playingId = null;
+    const player = createPlayer($('#miniPlayer'), {
+      onChange: (song) => {
+        playingId = song ? song.id : null;
+        document.querySelectorAll('#latest .cand').forEach((card) => {
+          const on = card.dataset.song === playingId;
+          card.classList.toggle('playing', on);
+          const label = card.querySelector('.linkbtn'); if (label) label.textContent = on ? '▶ Playing' : '▶ Play';
+        });
+      },
+    });
+    (async () => {
+      const host = $('#latest');
+      try {
+        const { songs } = await api('/api/latest');
+        if (!songs.length) { $('#songs').hidden = true; return; }
+        host.replaceChildren(...songs.map((s) => el('article', { class: 'cand', 'data-song': s.id },
+          el('button', { class: 'cand-thumb', type: 'button', 'data-play': s.id, 'aria-label': `Play ${s.name}` },
+            s.thumb ? el('img', { src: s.thumb, alt: '', loading: 'lazy' }) : el('div', { class: 'thumb-empty' }, '♪'),
+            el('span', { class: 'play-badge', 'aria-hidden': 'true' })),
+          el('div', { class: 'cand-body' }, el('h3', {}, s.name),
+            el('p', { class: 'small', style: 'margin:0' }, el('button', { class: 'linkbtn', type: 'button', 'data-play': s.id }, '▶ Play'))))));
+        host.addEventListener('click', (e) => {
+          const b = e.target.closest('[data-play]'); if (!b) return;
+          const s = songs.find((x) => x.id === b.dataset.play); if (!s) return;
+          if (heroVideo.v) showPoster(); // stop the video at the top if it was playing
+          player.play({ id: s.id, name: s.name, url: `https://www.youtube.com/watch?v=${s.id}` });
+        });
+      } catch { $('#songs').hidden = true; }
+    })();
+
+    // ---- Next on Spotify: live countdown to the ballot closing, and who is leading ----
+    let vote = null, offset = 0;
+    const cdBox = (id, label) => el('div', { class: 'cd-box' }, el('b', { id }, '--'), el('span', {}, label));
+    function tickVote() {
+      if (!vote?.round) return;
+      const s = Math.floor(Math.max(0, Date.parse(vote.round.endsAt) - (Date.now() + offset)) / 1000);
+      const set = (id, n) => { const e = $(id); if (e) e.textContent = String(n).padStart(2, '0'); };
+      set('#hCdD', Math.floor(s / 86400)); set('#hCdH', Math.floor(s / 3600) % 24); set('#hCdM', Math.floor(s / 60) % 60); set('#hCdS', s % 60);
+    }
+    async function loadVote() {
+      const card = $('#voteTeaser');
+      try {
+        vote = await api('/api/vote');
+        if (!vote.ready) { $('#vote').hidden = true; return; }
+        offset = Date.parse(vote.now) - Date.now();
+        const lead = vote.leaderboard.find((r) => r.winning);
+        card.replaceChildren(
+          el('p', { class: 'eyebrow', style: 'margin-bottom:10px' }, `${vote.round.label} ballot closes in`),
+          el('div', { class: 'cd-grid', role: 'timer' }, cdBox('hCdD', 'days'), cdBox('hCdH', 'hours'), cdBox('hCdM', 'mins'), cdBox('hCdS', 'secs')),
+          el('p', { class: 'muted small', style: 'margin:14px 0 0' }, lead
+            ? `In the lead right now: ${lead.name} (${lead.votes} ${lead.votes === 1 ? 'vote' : 'votes'}).`
+            : 'No votes yet. Be the first to vote.'),
+          el('div', { class: 'row', style: 'justify-content:center;gap:12px;margin-top:18px' },
+            el('a', { class: 'btn', href: '/vote' }, 'Cast your vote →'),
+            el('a', { class: 'btn ghost', href: '/next-release' }, 'Countdown to Spotify'),
+            el('a', { class: 'btn ghost', href: '/leaderboard' }, 'Leaderboard')));
+        tickVote();
+      } catch { $('#vote').hidden = true; }
+    }
+    setInterval(tickVote, 1000);
+    loadVote();
+    setInterval(() => { if (!document.hidden) loadVote(); }, 60000);
+
+    // ---- Links to Jenny's pages (About + footer), and search-engine data built from what is on the page ----
+    (async () => {
+      const cfg = await cfgPromise;
+      let links = [];
+      try { links = (await api('/api/links')).links; } catch { /* no links to show */ }
+      if (cfg.youtubeUrl) links = [...links, { id: 'youtube', label: 'YouTube', url: cfg.youtubeUrl }];
+      $('#aboutLinks').replaceChildren(...links.map((l) => el('a', { class: 'btn ghost sm', href: l.url, target: '_blank', rel: 'noopener' }, `${l.label} ↗`)));
+      $('#footerLinks').replaceChildren(...links.map((l) => el('a', { href: l.url, target: '_blank', rel: 'noopener' }, l.label)));
+
+      // structured data: the FAQ (read from the page itself, so it always matches) and the artist
+      const faq = [...document.querySelectorAll('#faq details')].map((d) => ({
+        '@type': 'Question', name: d.querySelector('summary').textContent.trim(),
+        acceptedAnswer: { '@type': 'Answer', text: d.querySelector('.answer').textContent.replace(/\s+/g, ' ').trim() },
+      }));
+      const data = [
+        { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq },
+        { '@context': 'https://schema.org', '@type': 'MusicGroup', name: cfg.brand, genre: 'Dark country', url: location.origin, sameAs: links.map((l) => l.url) },
+      ];
+      const tag = el('script', { type: 'application/ld+json' });
+      tag.textContent = JSON.stringify(data);
+      document.head.append(tag);
+    })();
+  </script>
+</body>
+</html>

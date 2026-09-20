@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>This week's songs — {brand}</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="topbar" hidden></div>
+
+  <header class="banner-full">
+    <div class="banner-box"><div class="banner-inner"><a class="banner-home" href="/" aria-label="Jenny Ashby home"><img class="banner" src="/img/jenny-ashby-header.jpg" width="1600" height="608" alt="Jenny Ashby — Dark Country, Real Stories"></a></div></div>
+  </header>
+
+  <div class="page-box">
+
+  <div class="page-body">
+    <p class="small" style="text-align:right;margin:14px 0 0"><a id="billing" href="#" hidden>Manage subscription</a></p>
+    <main style="padding:8px 0 60px" id="app">
+      <p class="muted">Loading your songs…</p>
+    </main>
+  </div>
+  </div>
+
+  <script type="module">
+    import { $, api, el, applyBranding, getToken, forgetToken, mountNav, memberGate, shareRow } from '/app.js';
+    applyBranding();
+    mountNav('invite', { publicBar: true });
+
+    const token = getToken(); // from the link, or remembered on this browser
+    const app = $('#app');
+    let refUrl = '';
+
+    function empty(node) { node.replaceChildren(); return node; }
+    // My songs is part of the members area: no email (or an unknown link) means the gate.
+    const gate = () => memberGate(app, {
+      title: ['Members ', 'area'],
+      text: "Enter your email to open your songs, your invite link and the rest of the members area. It's free.",
+      source: 'gate:songs',
+    });
+    function fail(text, withForm = true, heading = ['Hmm, that link ', "isn't working"]) {
+      empty(app).append(
+        el('h1', {}, heading[0], el('span', { class: 'grad' }, heading[1])),
+        el('p', { class: 'lead' }, text),
+        withForm && el('a', { class: 'btn', href: '/' }, 'Enter your email →'),
+      );
+    }
+
+    // ---- share helpers ----
+    const shareText = (brand) => `I'm getting a free ${brand} song every week. Join free and we both unlock more:`;
+
+    // ---- cards ----
+    function songCard(s, badge) {
+      if (s.locked) {
+        // The free tier: song 1 is unlocked when you join, song 2 needs 1 friend, song 3 needs 2 (the server sends `needs`).
+        const need = s.needs;
+        return el('div', { class: 'song locked' },
+          el('div', { class: 'media' }, el('span', { class: 'lock', 'aria-hidden': 'true' }, '🔒')),
+          el('div', { class: 'body' },
+            el('p', { class: 'title' }, `Song ${s.index + 1}`),
+            el('p', { class: 'muted small', style: 'margin:0' }, `Unlocks when ${need} friend${need > 1 ? 's' : ''} join${need > 1 ? '' : 's'} through your link`),
+          ));
+      }
+      return el('div', { class: 'song' },
+        el('div', { class: 'media' }, el('iframe', {
+          src: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(s.id)}`,
+          title: s.title, loading: 'lazy', allowfullscreen: true,
+          referrerpolicy: 'strict-origin-when-cross-origin',
+          allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+        })),
+        el('div', { class: 'body' },
+          badge ? el('span', { class: 'pill', style: 'margin-bottom:8px' }, 'Unlocked ✓') : null,
+          el('p', { class: 'title' }, s.title),
+          el('a', { class: 'small', href: s.url, target: '_blank', rel: 'noopener' }, 'Open on YouTube ↗'),
+        ));
+    }
+
+    // Exclusive songs the server says this viewer may see (members: everything; others: only what has gone public).
+    function exclusiveSection(songs, member) {
+      if (!songs.length) return null;
+      const label = (s) => (s.access === 'members_only' ? 'Members only'
+        : s.isPublicNow ? 'Now public'
+        : `Early access · public ${new Date(s.publicReleaseAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`);
+      const player = (s) => (s.hasAudio
+        ? el('audio', { controls: true, preload: 'none', style: 'width:100%;margin-top:10px', src: `/api/songs/${encodeURIComponent(s.slug)}/audio?t=${encodeURIComponent(token)}` })
+        : s.youtubeId
+          ? el('div', { class: 'media', style: 'position:relative;aspect-ratio:16/9;margin-top:10px' }, el('iframe', {
+              src: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(s.youtubeId)}`, title: s.title, loading: 'lazy', allowfullscreen: true,
+              referrerpolicy: 'strict-origin-when-cross-origin', style: 'position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:12px' }))
+          : el('p', { class: 'muted small', style: 'margin:8px 0 0' }, 'Audio coming soon.'));
+      return el('section', { style: 'margin-top:28px' },
+        el('h2', { style: 'font-size:24px' }, member ? 'Early access, just for members' : 'New from Jenny'),
+        songs.map((s) => el('div', { class: 'card', style: 'margin-bottom:12px' },
+          el('h3', { style: 'margin:0' }, s.title), el('span', { class: 'small muted' }, label(s)), player(s))));
+    }
+
+    function shareBox(d, brand) {
+      const remaining = d.total - d.unlocked;
+      return el('div', { class: 'card', style: 'margin-top:20px' },
+        el('h3', {}, remaining > 0 ? `Unlock ${remaining} more song${remaining > 1 ? 's' : ''} — free` : 'All songs unlocked 🎉'),
+        el('p', { class: 'muted', style: 'margin:0 0 14px' },
+          `Each friend who joins through your link unlocks another song, up to ${d.total} a week. Send it to anyone who loves music.`),
+        el('div', { class: 'progress', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(d.total), 'aria-valuenow': String(d.unlocked) },
+          el('i', { style: `width:${(d.unlocked / d.total) * 100}%` })),
+        el('p', { class: 'small muted', style: 'margin:8px 0 0' }, `${d.invited} friend${d.invited === 1 ? '' : 's'} joined this week · ${d.unlocked} of ${d.total} songs unlocked`),
+        d.pending > 0 ? el('p', { class: 'small', style: 'margin:6px 0 0;color:var(--accent-2)' },
+          `${d.pending} friend${d.pending === 1 ? '' : 's'} joined but ${d.pending === 1 ? "hasn't" : "haven't"} confirmed their email yet. They count as soon as they do.`) : null,
+        shareRow(d.refUrl, { text: shareText(brand), subject: 'You need to hear these songs', title: brand, inputLabel: 'Your invite link' }),
+      );
+    }
+
+    function render(d, cfg, exclusive) {
+      refUrl = d.refUrl;
+      empty(app);
+      if (d.paid) {
+        $('#billing').hidden = false; $('#billing').href = `/billing?t=${encodeURIComponent(token)}`;
+        app.append(
+          el('span', { class: 'pill' }, 'Member'),
+          el('h1', { style: 'margin-top:14px' }, "This week's ", el('span', { class: 'grad' }, 'songs')),
+        );
+      } else {
+        app.append(
+          d.unlocked >= d.total
+            ? el('h1', {}, 'All unlocked. ', el('span', { class: 'grad' }, 'Enjoy 🎶'))
+            : el('h1', {}, 'Your free song ', el('span', { class: 'grad' }, 'is ready')),
+          el('p', { class: 'lead' }, d.unlocked >= d.total
+            ? 'Thanks for sharing. All of this week\'s songs are unlocked.'
+            : `Song 1 is yours. Each friend who joins through your link unlocks another song, up to ${d.total} a week. Or become a member for all ${d.total} instantly.`),
+        );
+      }
+
+      app.append(el('div', { class: 'songs' }, d.songs.map((s) => songCard(s, !d.paid))));
+
+      if (!d.paid) {
+        app.append(
+          shareBox(d, cfg.brand),
+          el('div', { class: 'card center', style: 'margin-top:16px' },
+            el('h3', {}, `Want every song, every week?`),
+            el('p', { class: 'muted', style: 'margin:0 0 16px' }, `Members get all ${d.total} songs instantly${d.earlyAccessLive ? ', plus new songs before they go public,' : ''} and the full library for ${d.price}/month. Cancel anytime from your account.`),
+            el('a', { class: 'btn', href: `/join?t=${encodeURIComponent(token)}` }, `Become a member · ${d.price}/mo`)),
+        );
+        const others = exclusiveSection(exclusive, false);
+        if (others) app.append(others);
+      } else {
+        app.append(shareBox(d, cfg.brand));
+        const early = exclusiveSection(exclusive, true);
+        if (early) app.append(early);
+        if (d.archive.length) {
+          const ul = el('div', { class: 'archive' });
+          for (const drop of d.archive) {
+            ul.append(el('h4', {}, new Date(drop.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })),
+              el('ul', {}, drop.songs.map((s) => el('li', {}, el('a', { href: s.url, target: '_blank', rel: 'noopener' }, s.title)))));
+          }
+          app.append(el('div', { class: 'card', style: 'margin-top:20px' }, el('h2', { style: 'font-size:22px' }, 'Member library'), ul));
+        }
+      }
+    }
+
+    async function load(first) {
+      const cfg = await applyBranding();
+      try {
+        const d = await api(`/api/drop?t=${encodeURIComponent(token)}`);
+        if (!d.ready) return fail("We're getting this week's songs ready. Check back in a little while.", false, ['Almost ', 'ready']);
+        const exclusive = (await api(`/api/songs?t=${encodeURIComponent(token)}`).catch(() => ({ songs: [] }))).songs;
+        // Re-render only when something changed, so a playing video isn't interrupted by the background refresh.
+        const sig = JSON.stringify([d.unlocked, d.pending, d.paid, d.songs.map((s) => s.id || 0), exclusive.map((s) => [s.slug, s.isPublicNow])]);
+        if (first || sig !== load.sig) { load.sig = sig; render(d, cfg, exclusive); }
+      } catch (err) {
+        if (first) {
+          if (/not valid/i.test(err.message)) { forgetToken(); return gate(); } // stale or unknown link
+          fail(err.message);
+        }
+      }
+    }
+
+    if (!token) gate();
+    else {
+      load(true);
+      // Pick up new referrals (or a just-completed payment) without a manual refresh.
+      setInterval(() => { if (!document.hidden) load(false); }, 20000);
+    }
+  </script>
+</body>
+</html>
