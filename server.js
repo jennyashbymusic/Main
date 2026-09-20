@@ -16,6 +16,7 @@ import { router as storeRouter, downloads } from './src/routes/store.js';
 import { router as linksRouter } from './src/routes/links.js';
 import { router as songsRouter } from './src/routes/songs.js';
 import { router as tipsRouter } from './src/routes/tips.js';
+import { storeStatusLine } from './src/store.js';
 import { startVotingScheduler } from './src/voting.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -85,6 +86,7 @@ app.listen(cfg.port, () => {
     console.warn(`  Site URL   BASE_URL is not set, so emails and Stripe return pages use ${cfg.baseUrl}. Invite links shown on the site follow the address visitors use. Set BASE_URL to your public https address before launch.`);
   }
   console.log('');
+  storeStatusLine().then((line) => console.log(`  Store music: ${line}`)).catch((err) => console.error('[store]', err.message));
   startScheduler();
   startVotingScheduler();
 });

@@ -11,7 +11,7 @@ import { mailerMode, sendMail } from '../mailer.js';
 import { syncSubscriber, systemeEnabled, tagsForStatus } from '../systeme.js';
 import { youtubeMode } from '../youtube.js';
 import { adminSummary, setSpotifyAdded } from '../voting.js';
-import { storeSummary } from '../store.js';
+import { refreshStore, storeSummary } from '../store.js';
 import { chorusSummary, setDelivered } from '../chorus.js';
 import { tipsSummary } from '../tips.js';
 import { safeEqual } from '../util.js';
@@ -39,7 +39,8 @@ router.use((req, res, next) => {
 
 router.get('/', (_req, res) => res.sendFile(path.join(root, 'views', 'admin.html')));
 
-router.get('/api/stats', (_req, res) => {
+router.get('/api/stats', async (_req, res) => {
+  await refreshStore();
   const counts = Object.fromEntries(
     db.prepare('SELECT status, COUNT(*) AS n FROM subscribers GROUP BY status').all().map((r) => [r.status, r.n]),
   );

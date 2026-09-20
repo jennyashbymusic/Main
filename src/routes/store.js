@@ -4,7 +4,7 @@ import { cfg } from '../config.js';
 import { getByToken } from '../db.js';
 import {
   StoreError, checkoutParams, demoCatalog, fulfillOrder, itemsForCart, orderByToken, orderView,
-  publicCatalog, resolveFile, scanCatalog, streamAlbumZip, takeDownload, tracksOf,
+  publicCatalog, refreshStore, refundDownload, resolveFile, scanCatalog, sendCover, sendDownload, streamAlbumZip, takeDownload, tracksOf,
 } from '../store.js';
 import { stripe } from './billing.js';
 import { rateLimit } from '../util.js';
@@ -18,17 +18,19 @@ const needMember = (res) => res.status(401).json({ error: 'Join free with your e
 
 router.get('/catalog', async (req, res) => {
   if (!member(req)) return needMember(res);
+  await refreshStore(); // bucket mode: pick up music you just uploaded (does nothing when the music is on disk)
   // ?preview=1 shows sample items (see demoCatalog) so an empty store can still be looked at
   res.set('Cache-Control', 'no-store').json(req.query.preview === '1' ? await demoCatalog() : await publicCatalog());
 });
 
 /** Cover art (album cover.jpg, or a song's matching image). Public, like any product photo; only serves an image that belongs to a catalog item. */
-router.get('/cover/:id', (req, res) => {
+router.get('/cover/:id', async (req, res) => {
+  await refreshStore();
   const { songs, albums } = scanCatalog();
   const item = [...songs, ...albums].find((i) => i.id === req.params.id);
   const file = item?.coverRel && resolveFile(item.coverRel);
   if (!file) return res.status(404).end();
-  res.set('Cache-Control', 'public, max-age=3600').sendFile(file);
+  await sendCover(res, file);
 });
 
 /** "Checkout": build a Stripe Checkout Session for the cart. Amounts are computed here, never taken from the browser. */
@@ -36,6 +38,7 @@ router.post('/checkout', rateLimit({ windowMs: 10 * 60_000, max: 20 }), async (r
   const sub = member(req);
   if (!sub) return needMember(res);
   try {
+    await refreshStore();
     const items = itemsForCart(req.body?.items); // validates the cart first, so a preview cart gets the preview message
     if (!stripe) return res.status(503).json({ error: 'Payments are not set up yet.' });
     const session = await stripe.checkout.sessions.create(checkoutParams(items, sub));
@@ -52,6 +55,7 @@ router.get('/thanks', async (req, res) => {
   const id = String(req.query.session_id || '');
   if (!stripe || !/^cs_\w+$/.test(id)) return res.status(400).json({ error: 'Invalid session.' });
   try {
+    await refreshStore();
     const order = fulfillOrder(await stripe.checkout.sessions.retrieve(id));
     if (!order) return res.status(402).json({ error: 'Payment not completed.' });
     res.json({ token: order.token });
@@ -62,7 +66,8 @@ router.get('/thanks', async (req, res) => {
 });
 
 /** A buyer's download page data. The private order token in the link is the only credential needed. */
-router.get('/order', (req, res) => {
+router.get('/order', async (req, res) => {
+  await refreshStore();
   const order = orderByToken(String(req.query.o || ''));
   if (!order) return res.status(404).json({ error: 'This download link is not valid.' });
   res.set('Cache-Control', 'no-store').json(orderView(order));
@@ -76,7 +81,8 @@ const safeName = (text) => text.replace(/[\\/:*?"<>|]+/g, '').trim() || 'downloa
  * /download/:orderToken/:itemId/:track     one track of an album
  * Only items in that order can be fetched, and each file has a download limit.
  */
-downloads.get('/:token/:itemId{/:track}', rateLimit({ windowMs: 10 * 60_000, max: 60 }), (req, res) => {
+downloads.get('/:token/:itemId{/:track}', rateLimit({ windowMs: 10 * 60_000, max: 60 }), async (req, res) => {
+  await refreshStore();
   const order = orderByToken(req.params.token);
   const item = order?.items.find((i) => i.id === req.params.itemId);
   if (!item) return res.status(404).type('text').send('This download link is not valid.');
@@ -111,5 +117,5 @@ downloads.get('/:token/:itemId{/:track}', rateLimit({ windowMs: 10 * 60_000, max
     res.attachment(name);
     return streamAlbumZip(res, item, tracks);
   }
-  res.download(file, name);
+  if (!(await sendDownload(res, file, name))) refundDownload(order.id, key);
 });

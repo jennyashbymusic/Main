@@ -16,7 +16,7 @@ import { dropEmail } from '../emails.js';
 import { sendMail } from '../mailer.js';
 import { fulfillChorus } from '../chorus.js';
 import { fulfillTip } from '../tips.js';
-import { fulfillOrder } from '../store.js';
+import { fulfillOrder, refreshStore } from '../store.js';
 import { syncSubscriber, tagsForStatus } from '../systeme.js';
 import { rateLimit } from '../util.js';
 
@@ -109,7 +109,7 @@ export const webhook = [express.raw({ type: 'application/json' }), async (req, r
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
-        if (session.metadata?.store === '1') fulfillOrder(session); // a music-store purchase
+        if (session.metadata?.store === '1') { await refreshStore(); fulfillOrder(session); } // a music-store purchase
         else if (session.metadata?.chorus === '1') fulfillChorus(session); // a custom chorus order
         else if (session.metadata?.tip === '1') fulfillTip(session); // a tip-jar tip
         else await activateFromSession(session); // a membership subscription

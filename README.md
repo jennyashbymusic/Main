@@ -84,6 +84,7 @@ store/albums/Dark Roads/01 - First Song.mp3      $12 per album folder (optional 
 ```
 
 - **See it before you have any files:** open `/store?preview=1` (as a member) for a sample store built from Jenny's real song titles and thumbnails. Nothing in the preview can be bought. The link is also in `/admin`.
+- **Where the music lives:** in a folder (`STORE_DIR`, the default) **or in a private Supabase Storage bucket** (fill in `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`). Same names either way: `songs/Song.mp3` (+ `Song.jpg` cover), `albums/Album Name/01 - Track.mp3` (+ `cover.jpg`). Buyers never get a public link: the site checks the order, counts the download, then hands over a 60-second signed link (albums are zipped on the fly). `npm run store-check` tests the connection and explains any problem. Steps are in DEPLOY.md.
 - Members add items to a cart and pay through Stripe Checkout. Prices are set by the server (`SONG_PRICE_CENTS`, `ALBUM_PRICE_CENTS`), never by the browser.
 - After paying, the buyer gets a receipt email and a private download page: songs download directly, albums as a `.zip` or track by track. Each file can be downloaded `DOWNLOAD_LIMIT` times.
 - The files are never publicly reachable, only through those private links. A song whose title matches a YouTube video gets its thumbnail and a "Listen first" link.

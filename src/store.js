@@ -14,6 +14,11 @@ import { getUploads } from './youtube.js';
 import { songName } from './voting.js';
 import { orderEmail, unsubscribeUrlFor } from './emails.js';
 import { sendMail } from './mailer.js';
+import { once } from 'node:events';
+import { Readable } from 'node:stream';
+import { bucketMode, fetchObject, hasFile, listDir, refreshStore, signedUrl, snapshotInfo } from './storage.js';
+
+export { refreshStore };
 
 export class StoreError extends Error {
   constructor(message, status = 400) {
@@ -23,8 +28,10 @@ export class StoreError extends Error {
 }
 
 // On a brand-new hosting disk these folders do not exist yet. Make them, so music can be copied straight in.
-for (const sub of ['songs', 'albums']) {
-  try { fs.mkdirSync(path.join(cfg.storeDir, sub), { recursive: true }); } catch { /* read-only or missing disk: the store just shows as empty */ }
+if (!bucketMode) {
+  for (const sub of ['songs', 'albums']) {
+    try { fs.mkdirSync(path.join(cfg.storeDir, sub), { recursive: true }); } catch { /* read-only or missing disk: the store just shows as empty */ }
+  }
 }
 
 const AUDIO = /\.(mp3|wav|flac|m4a|aac|ogg|aiff?)$/i;
@@ -34,19 +41,21 @@ const natural = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base
 const hash = (text) => crypto.createHash('sha1').update(text).digest('hex').slice(0, 10);
 const posix = (...parts) => path.posix.join(...parts);
 
-const entries = (dir) => {
+// The contents of one store folder ("songs", "albums", "albums/Dark Roads"): from the Supabase bucket's snapshot, or from disk.
+const localEntries = (dir) => {
   try {
     return fs.readdirSync(dir, { withFileTypes: true });
   } catch {
     return []; // folder doesn't exist yet: the store is simply empty
   }
 };
+const entries = (rel) => (bucketMode ? listDir(rel) : localEntries(path.join(cfg.storeDir, rel)));
 
 /** "01 - Wildfire.mp3" -> "Wildfire" */
 const trackTitle = (file) => file.replace(AUDIO, '').replace(/^\s*\d{1,3}\s*[-._)]\s*/, '').trim();
 
 function albumTracks(albumRel) {
-  return entries(path.join(cfg.storeDir, albumRel))
+  return entries(albumRel)
     .filter((e) => e.isFile() && AUDIO.test(e.name))
     .sort((a, b) => natural.compare(a.name, b.name))
     .map((e) => ({ file: e.name, title: trackTitle(e.name) }));
@@ -54,7 +63,7 @@ function albumTracks(albumRel) {
 
 /** Everything for sale, read straight from the folders each time, so adding a file needs no restart. */
 export function scanCatalog() {
-  const songFiles = entries(path.join(cfg.storeDir, 'songs')).filter((e) => e.isFile());
+  const songFiles = entries('songs').filter((e) => e.isFile());
   const songs = songFiles
     .filter((e) => AUDIO.test(e.name))
     .sort((a, b) => natural.compare(a.name, b.name))
@@ -65,12 +74,12 @@ export function scanCatalog() {
       return { id: `s_${hash(rel)}`, kind: 'song', title: base.trim(), rel, coverRel: cover ? posix('songs', cover.name) : null, priceCents: cfg.songPriceCents };
     });
 
-  const albums = entries(path.join(cfg.storeDir, 'albums'))
+  const albums = entries('albums')
     .filter((e) => e.isDirectory())
     .sort((a, b) => natural.compare(a.name, b.name))
     .map((d) => {
       const rel = posix('albums', d.name);
-      const files = entries(path.join(cfg.storeDir, rel)).filter((e) => e.isFile());
+      const files = entries(rel).filter((e) => e.isFile());
       const cover = files.find((f) => COVER_NAME.test(f.name)) || files.find((f) => IMAGE.test(f.name));
       return { id: `a_${hash(rel)}`, kind: 'album', title: d.name.trim(), rel, coverRel: cover ? posix(rel, cover.name) : null, tracks: albumTracks(rel), priceCents: cfg.albumPriceCents };
     })
@@ -214,6 +223,7 @@ export function fulfillOrder(session) {
 
 /** Absolute path to a file inside the store folder, or null. Symlinks and ../ tricks that leave the folder are refused. */
 export function resolveFile(rel) {
+  if (bucketMode) return hasFile(rel) ? rel : null; // only files that really are in the bucket, by their exact path
   try {
     const root = fs.realpathSync(cfg.storeDir);
     const real = fs.realpathSync(path.resolve(root, rel));
@@ -229,6 +239,11 @@ export function takeDownload(orderId, fileKey) {
   if (used >= cfg.downloadLimit) return false;
   db.prepare('INSERT INTO downloads (order_id, file_key, n) VALUES (?, ?, 1) ON CONFLICT(order_id, file_key) DO UPDATE SET n = n + 1').run(orderId, fileKey);
   return true;
+}
+
+/** Give a download back (used when the file could not be sent because of a problem on our side, so the buyer isn't charged one). */
+export function refundDownload(orderId, fileKey) {
+  db.prepare('UPDATE downloads SET n = MAX(n - 1, 0) WHERE order_id = ? AND file_key = ?').run(orderId, fileKey);
 }
 
 export const tracksOf = (item) => (item.kind === 'album' ? albumTracks(item.rel) : []);
@@ -253,18 +268,71 @@ export function orderView(order) {
 }
 
 /** Stream an album as a zip. Audio is already compressed, so files are stored as-is. */
-export function streamAlbumZip(res, item, tracks) {
+export async function streamAlbumZip(res, item, tracks) {
   const zip = new ZipArchive({ store: true });
   zip.on('error', (err) => {
     console.error('[store] zip failed:', err.message);
     res.destroy(err);
   });
   zip.pipe(res);
-  tracks.forEach((t, i) => {
-    const file = resolveFile(posix(item.rel, t.file));
-    if (file) zip.file(file, { name: `${String(i + 1).padStart(2, '0')} - ${t.title}${path.extname(t.file)}` });
-  });
+  const entryName = (t, i) => `${String(i + 1).padStart(2, '0')} - ${t.title}${path.extname(t.file)}`;
+  if (!bucketMode) {
+    tracks.forEach((t, i) => {
+      const file = resolveFile(posix(item.rel, t.file));
+      if (file) zip.file(file, { name: entryName(t, i) });
+    });
+    return zip.finalize();
+  }
+  // From the bucket: fetch one track at a time and stream it into the zip, so a big album never sits in memory.
+  for (let i = 0; i < tracks.length && !res.destroyed; i++) {
+    try {
+      const source = await fetchObject(posix(item.rel, tracks[i].file));
+      const added = once(zip, 'entry');
+      zip.append(Readable.fromWeb(source.body), { name: entryName(tracks[i], i) });
+      await added;
+    } catch (err) {
+      console.error(`[store] could not add "${tracks[i].file}" to the zip:`, err.message);
+    }
+  }
   return zip.finalize();
+}
+
+/** Send one purchased file: from disk, or (bucket) a signed link that works for 60 seconds. */
+export async function sendDownload(res, file, name) {
+  if (!bucketMode) { res.download(file, name); return true; }
+  try {
+    res.set('Cache-Control', 'no-store').redirect(302, await signedUrl(file, name));
+    return true;
+  } catch (err) {
+    console.error('[store] download failed:', err.message);
+    res.status(502).type('text').send('The file could not be fetched right now. Please try again in a moment.');
+    return false; // the caller gives the buyer's download back
+  }
+}
+
+/** Send a cover image: from disk, or streamed from the bucket. */
+export async function sendCover(res, file) {
+  res.set('Cache-Control', 'public, max-age=3600');
+  if (!bucketMode) return res.sendFile(file);
+  try {
+    const source = await fetchObject(file);
+    res.type(source.headers.get('content-type') || 'image/jpeg');
+    return Readable.fromWeb(source.body).pipe(res);
+  } catch (err) {
+    console.error('[store] cover failed:', err.message);
+    return res.status(404).end();
+  }
+}
+
+/** One line for the startup log. */
+export async function storeStatusLine() {
+  if (!bucketMode) return `folder on disk (${cfg.storeDir})`;
+  await refreshStore(true);
+  const info = snapshotInfo();
+  const { songs, albums } = scanCatalog();
+  return info.lastError
+    ? `Supabase bucket "${cfg.storeBucket}": PROBLEM, ${info.lastError}`
+    : `Supabase bucket "${cfg.storeBucket}" (${songs.length} song${songs.length === 1 ? '' : 's'}, ${albums.length} album${albums.length === 1 ? '' : 's'})`;
 }
 
 // ---------- admin ----------
@@ -274,7 +342,9 @@ export function storeSummary() {
   const rows = db.prepare('SELECT * FROM orders ORDER BY id DESC LIMIT 8').all().map(parseOrder);
   const totals = db.prepare('SELECT COUNT(*) AS n, COALESCE(SUM(amount_cents), 0) AS cents FROM orders').get();
   return {
-    dir: cfg.storeDir,
+    dir: bucketMode ? `Supabase bucket "${cfg.storeBucket}"` : cfg.storeDir,
+    bucket: bucketMode ? cfg.storeBucket : null,
+    bucketError: bucketMode ? snapshotInfo().lastError : null,
     songs: songs.length,
     albums: albums.length,
     orders: totals.n,

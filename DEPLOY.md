@@ -95,7 +95,23 @@ Join the list on your home page with your own address. You should get the welcom
 ## 9. Add your music
 
 - **Members-only songs:** use `/admin` > Songs (or your upload script). They are saved on the disk automatically.
-- **Music for the store:** the store folder on the disk is `/var/data/store` (it has `songs/` and `albums/` inside). To copy files there you need SSH: in Render's **Account Settings** add your SSH key, then in the service's **Connect** menu copy the SSH command, and use `scp` (or a tool like WinSCP) with the same address. See Render's docs, "SSH". No restart is needed after adding files.
+- **Music for the store: use a Supabase bucket (easiest, drag and drop in your browser).**
+  1. Go to [supabase.com](https://supabase.com), sign in, and **New project**. Make this project **just for the music store** (see the warning below). Pick any name, region and database password.
+  2. In the project: **Storage > New bucket**. Name it exactly `store`. **Leave "Public bucket" OFF.** The bucket must stay private, because paid music is only ever handed out through the site.
+  3. Open the bucket. Click **Create folder** and make one called `songs`, and one called `albums`.
+  4. Upload your music by dragging files into the browser:
+     - **A song:** into `songs/`, for example `songs/Come Sit With Me.mp3`. Optional cover picture with the same name: `songs/Come Sit With Me.jpg`.
+     - **An album:** make a folder inside `albums/` named after the album, for example `albums/Dark Roads/`, and put the tracks in it as `01 - First Song.mp3`, `02 - Next Song.mp3`. Optional cover: `cover.jpg` in the same folder.
+     - The file names become the titles. New files appear in the store within about a minute, with no restart.
+  5. **Project Settings > API** (also called "API Keys"): copy the **Project URL** (like `https://abcdefgh.supabase.co`) and the **service_role** key (or, in the newer layout, the **secret** key).
+  6. In Render > **Environment**, set `SUPABASE_URL` to the Project URL and `SUPABASE_SERVICE_ROLE_KEY` to that key. (Leave `SUPABASE_STORE_BUCKET` as `store`, or change it if you named the bucket differently.) Render redeploys.
+  7. Check it: in Render's **Shell** run `npm run store-check`. It tells you in plain words what it found and what to fix. On your own computer: put the same two lines in `.env` and run the same command.
+
+  > **Important, about that key:** the `service_role`/secret key can do *everything* in its Supabase project (including reading any database tables in it). That is why the project should be used only for the store's music, and why the key goes **only** into Render's Environment (never into GitHub, never in a message).
+  >
+  > **Free Supabase projects can be paused** after a quiet week, and a paused project cannot serve your music. The site checks the bucket every few hours, which normally keeps it active, but if the store ever shows a "could not read the bucket" message, open the Supabase dashboard and click **Restore**. For a store you depend on, consider Supabase's paid plan.
+  >
+  > **Prefer no extra account?** Leave `SUPABASE_URL` empty and the music is read from the disk instead, in `/var/data/store` (with `songs/` and `albums/` inside). You would copy files there over SSH: in Render's **Account Settings** add your SSH key, then in the service's **Connect** menu copy the SSH command and use `scp` (or WinSCP). See Render's docs, "SSH".
 
 ## 10. Moving what you already have (optional)
 

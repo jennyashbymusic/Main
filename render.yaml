@@ -35,6 +35,8 @@ services:
         value: /var/data/store
       - key: SMTP_PORT
         value: "587"
+      - key: SUPABASE_STORE_BUCKET
+        value: store
 
       # ---- your secrets: Render will ask you for each of these when you create the Blueprint (see .env for where to find them) ----
       - key: STRIPE_SECRET_KEY
@@ -60,6 +62,11 @@ services:
       - key: YOUTUBE_API_KEY
         sync: false
       - key: SYSTEME_API_KEY
+        sync: false
+      # Music store in a Supabase bucket (optional: leave both empty to keep the music on the disk, in /var/data/store)
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       # Your own domain, for example https://jennyashby.com. Leave it empty on the first deploy: the site then uses the
       # address Render gives it (https://jenny-ashby-site.onrender.com).

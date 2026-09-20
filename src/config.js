@@ -90,6 +90,11 @@ export const cfg = {
   songsPerDrop: Number(env('SONGS_PER_DROP', '3')),
 
   // Music store: songs and albums sold as downloads. Put the audio files in STORE_DIR (see store/README.txt).
+  // Music store in a Supabase Storage bucket instead of a folder. Set both of the first two to switch it on (see DEPLOY.md).
+  supabaseUrl: env('SUPABASE_URL').replace(/\/+$/, ''),
+  supabaseKey: env('SUPABASE_SERVICE_ROLE_KEY'),
+  storeBucket: env('SUPABASE_STORE_BUCKET', 'store'),
+  storeCacheSeconds: Number(env('STORE_CACHE_SECONDS', '60')), // how long the site remembers what is in the bucket
   storeDir: path.resolve(projectRoot, env('STORE_DIR', 'store')),
   songPriceCents: Number(env('SONG_PRICE_CENTS', '200')),
   albumPriceCents: Number(env('ALBUM_PRICE_CENTS', '1200')),

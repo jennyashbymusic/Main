@@ -12,7 +12,8 @@
     "dev": "node --watch --disable-warning=ExperimentalWarning server.js",
     "send": "node --disable-warning=ExperimentalWarning scripts/send-now.js",
     "runway": "node --disable-warning=ExperimentalWarning scripts/runway.js",
-    "setup-check": "node --disable-warning=ExperimentalWarning scripts/setup-check.js"
+    "setup-check": "node --disable-warning=ExperimentalWarning scripts/setup-check.js",
+    "store-check": "node --disable-warning=ExperimentalWarning scripts/store-check.js"
   },
   "dependencies": {
     "archiver": "^8.0.0",

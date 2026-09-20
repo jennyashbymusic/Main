@@ -154,7 +154,8 @@
       const usd = (c) => new Intl.NumberFormat(undefined, { style: 'currency', currency: st.currency }).format(c / 100);
       $('#store').replaceChildren(
         el('p', { style: 'margin:0 0 6px' }, `${st.songs} song${st.songs === 1 ? '' : 's'} and ${st.albums} album${st.albums === 1 ? '' : 's'} for sale · ${st.orders} order${st.orders === 1 ? '' : 's'} · ${usd(st.revenueCents)} sold`),
-        el('p', { class: 'muted', style: 'margin:0 0 8px' }, 'Add music by dropping audio files into: ', el('b', {}, st.dir), ' (songs/ for songs, albums/Album Name/ for albums). No restart needed.'),
+        el('p', { class: 'muted', style: 'margin:0 0 8px' }, st.bucket ? 'Add music by uploading files to your ' : 'Add music by dropping audio files into: ', el('b', {}, st.dir), st.bucket ? ' (a "songs" folder for songs, "albums/Album Name" for albums). No restart needed.' : ' (songs/ for songs, albums/Album Name/ for albums). No restart needed.'),
+        ...(st.bucketError ? [el('p', { style: 'margin:0 0 8px;color:#ff8f7b' }, 'Could not read the bucket: ' + st.bucketError)] : []),
         el('p', { style: 'margin:0 0 10px' }, el('a', { href: '/store?preview=1', target: '_blank', rel: 'noopener' }, 'Preview the store with sample items →'), el('span', { class: 'muted' }, ' (you need to have joined with your email on this browser)')),
         ...st.recent.map((o) => el('div', { style: 'padding:6px 0;border-top:1px solid var(--line)' }, `${fmt(o.createdAt)} · ${o.email || 'no email'} · ${usd(o.amountCents)} · ${o.items.join(', ')}`)));
       $('#history').replaceChildren(...state.history.map((h) => el('tr', {},

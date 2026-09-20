@@ -38,6 +38,7 @@ add('E. Going live (only when the site is on the internet)', 'DATA_DIR + MEMBERS
 // ---- F. Optional ----
 add('F. Optional', 'YOUTUBE_API_KEY', set(cfg.youtubeKey), 'Google Cloud Console > YouTube Data API v3 > Credentials. Without it only the newest 15 videos are used', { required: false });
 add('F. Optional', 'SYSTEME_API_KEY', set(cfg.systemeKey), 'Systeme.io > Profile > Settings > Public API keys (only if you use Systeme.io)', { required: false });
+add('F. Optional', 'SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY', set(cfg.supabaseUrl) && set(cfg.supabaseKey), 'Only if the store music lives in a Supabase bucket instead of the disk (DEPLOY.md, step 9). Then run: npm run store-check', { required: false });
 add('F. Optional', 'SPOTIFY_PLAYLIST_URL', set(cfg.spotifyPlaylistUrl), 'Your Spotify playlist for the monthly vote winners', { required: false });
 
 // ---- print ----
